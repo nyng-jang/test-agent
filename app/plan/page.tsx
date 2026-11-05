@@ -24,7 +24,8 @@ function PlanStep() {
   const [fieldTitle, setFieldTitle] = useState("");
   const [fieldCondition, setFieldCondition] = useState("");
   const [fieldCriteria, setFieldCriteria] = useState("");
-  const [text, setText] = useState(flow.planLines.join("\n"));
+  const [text, setText] = useState(flow.planLines.join("
+"));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const live = mode === "live";
@@ -37,12 +38,14 @@ function PlanStep() {
       </>
     );
 
-  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = text.split("
+").map((l) => l.trim()).filter(Boolean);
   const premises = flowPremises(flow);
   const key = gapKeyOf(flow.analysis, lines, premises);
   const bareCount = lines.filter(bare).length;
   const reviewCount = lines.filter((line) => normalizePlanLine(line).review.length > 0).length;
-  const setLines = (ls: string[]) => { setText(ls.join("\n")); update({ planLines: ls }); };
+  const setLines = (ls: string[]) => { setText(ls.join("
+")); update({ planLines: ls }); };
 
   const detect = async () => {
     update({ planLines: lines });
@@ -97,12 +100,15 @@ function PlanStep() {
       <TabPanel idPrefix="plan" id={tab}>
         <section className="section">
           {tab === "text" ? (
-            <div className="card plan-input-card">\n              <label className="f" htmlFor="plan" style={{ marginTop: 0 }}>시험 계획을 자유롭게 입력해 주세요</label>
+            <div className="card plan-input-card">
+              <label className="f" htmlFor="plan" style={{ marginTop: 0 }}>시험 계획을 자유롭게 입력해 주세요</label>
               <p className="small muted">시험 ID나 정해진 항목명이 없어도 됩니다. 내용을 항목·조건·판정 기준으로 정리하고 빠진 정보는 확인 필요로 표시합니다.</p>
               <textarea id="plan" value={text} readOnly={!live} style={{ minHeight: 220 }}
                 onChange={(e) => setText(e.target.value)}
                 onBlur={() => update({ planLines: lines })}
-                placeholder={"저온 시동 시험 (-30℃ 2시간 방치) → 1초 이내 작동\n차선 유지 주행 (야간, 직선·곡선 각 5회) → 중앙 ±10cm\nE-stop 정지 확인 (근거리)"} />
+                placeholder={"저온 시동 시험 (-30℃ 2시간 방치) → 1초 이내 작동
+차선 유지 주행 (야간, 직선·곡선 각 5회) → 중앙 ±10cm
+E-stop 정지 확인 (근거리)"} />
               <div className="small muted" style={{ marginTop: 4 }}>
                 {lines.length}개 항목
                 {bareCount > 0 && <> · <span className="warn-t">조건·기준 없이 이름만 있는 항목 {bareCount}개</span></>}
