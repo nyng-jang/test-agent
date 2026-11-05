@@ -72,7 +72,7 @@ function PlanStep() {
       <StepHead n={2} title="내 시험 계획"
         desc={<>지금까지 짠 시험 계획을 넣어 주세요. AI가 1단계 분석과 대조해 빠진 조건을 찾습니다. 시스템: <b>{flow.analysis?.name}</b></>} />
 
-      <details className="card guide" open={live && lines.length === 0} style={{ marginTop: 12 }}>
+      <details className="card guide plan-guide" open={live && lines.length === 0} style={{ marginTop: 12 }}>
         <summary>작성 예시: 시험 항목 · 조건 · 판정 기준을 나눠 쓰면 비교가 정확해집니다</summary>
         <div className="tbl-wrap" style={{ marginTop: 10 }}>
           <table className="tbl" style={{ minWidth: 0 }}>
@@ -97,8 +97,7 @@ function PlanStep() {
       <TabPanel idPrefix="plan" id={tab}>
         <section className="section">
           {tab === "text" ? (
-            <div className="card">
-              <label className="f" htmlFor="plan" style={{ marginTop: 0 }}>시험 계획을 자유롭게 입력해 주세요</label>
+            <div className="card plan-input-card">\n              <label className="f" htmlFor="plan" style={{ marginTop: 0 }}>시험 계획을 자유롭게 입력해 주세요</label>
               <p className="small muted">시험 ID나 정해진 항목명이 없어도 됩니다. 내용을 항목·조건·판정 기준으로 정리하고 빠진 정보는 확인 필요로 표시합니다.</p>
               <textarea id="plan" value={text} readOnly={!live} style={{ minHeight: 220 }}
                 onChange={(e) => setText(e.target.value)}
