@@ -56,11 +56,11 @@ function TestButton({ t, className, children }: { t: TestItem; className?: strin
 export function Overview({ s }: { s: S }) {
   const coveragePct = Math.round(((s.full + s.partial * 0.5) / Math.max(1, s.total)) * 100);
   return (
-    <div className="stats">
-      <div className="stat gap"><div className="v">{s.missingCount}</div><div className="l">누락</div></div>
+    <div className="stats result-kpis">
+      <div className="stat total"><div className="v">{s.total}</div><div className="l">제안 시험 항목</div></div>
       <div className="stat warn"><div className="v">{s.partial}</div><div className="l">부분 반영</div></div>
-      <div className="stat ok"><div className="v">{s.full}</div><div className="l">계획에 있음</div></div>
-      <div className="stat"><div className="v">{coveragePct}%</div><div className="l">커버리지 · 제안 {s.total}개 기준</div></div>
+      <div className="stat gap"><div className="v">{s.missingCount}</div><div className="l">누락</div></div>
+      <div className="stat coverage"><div className="v">{coveragePct}%</div><div className="l">시험 계획 커버리지</div><div className="hint">완전 반영 {s.full}개 · 부분 반영 {s.partial}개</div></div>
     </div>
   );
 }
@@ -96,13 +96,18 @@ export function PremiseSummary({ premises, tests }: { premises: Premise[]; tests
 export function GapList({ data, s }: { data: CaseData; s: S }) {
   const [prio, setPrio] = useState<Priority | "all">("all");
   const [cat, setCat] = useState<Category | "all">("all");
+  const [expanded, setExpanded] = useState<string | null>(() => s.missing.find((t) => s.prio[t.id] === "high")?.id ?? s.missing[0]?.id ?? null);
+  const open = useOpen();
   if (!s.missing.length) return <div className="notice">계획에서 빠진 항목이 없습니다.</div>;
   const list = s.missing.filter((t) => (prio === "all" || s.prio[t.id] === prio) && (cat === "all" || t.cat === cat));
   const reqText = (id: string) => data.requirements.find((r) => r.id === id)?.text ?? "";
   return (
     <section className="section">
-      <div className="toolbar">
-        <h2 style={{ margin: 0, flex: 1, fontSize: 18 }}>우선 확인할 항목</h2>
+      <div className="toolbar gaplist-toolbar">
+        <div>
+          <h2 style={{ margin: 0, fontSize: 19 }}>우선 확인할 항목</h2>
+          <p className="small muted" style={{ margin: "3px 0 0" }}>누락되었거나 일부만 반영된 시험을 선택해 조건과 근거를 확인하세요.</p>
+        </div>
         <div className="seg" role="group" aria-label="우선순위 필터">
           <button className="btn" aria-pressed={prio === "all"} onClick={() => setPrio("all")}>전체 {s.missing.length}</button>
           {(["high", "mid", "low"] as Priority[]).map((p) =>
@@ -117,39 +122,44 @@ export function GapList({ data, s }: { data: CaseData; s: S }) {
           </select>
         </label>
       </div>
-      <p className="desc">계획에 없거나 일부만 다룬 시험입니다. 우선순위는 계획 상태와 안전 중요도를 함께 본 판단입니다. 우선순위 높음은 조건까지 펼쳐 두고, 나머지는 제목만 보여줍니다. 항목을 누르면 근거를 볼 수 있습니다.</p>
       <ul className="gaplist">
         {list.map((t) => {
-          const compact = prio === "all" && s.prio[t.id] !== "high" && s.byPrio.high > 0;
+          const isOpen = expanded === t.id;
           return (
-          <li key={t.id} className={`gapcard ${s.status[t.id]} ${compact ? "compact" : ""}`}>
-            <TestButton t={t} className="gapcard-btn">
-              <div className="gapcard-top">
-                <PriorityBadge p={s.prio[t.id]} />
-                <StatusPill st={s.status[t.id]} />
-                <AssumeTag t={t} premises={data.premises} />
-                <span className="spacer" />
-                <span className="small muted">{catLabel(t.cat)} · {t.id}</span>
-              </div>
-              <div className="gapcard-title">{t.title}</div>
-              {!compact && <>
-              <dl className="kv">
-                <dt>조건</dt><dd>{t.condition}</dd>
-                <dt>판정 기준</dt><dd>{t.criteria}</dd>
-                {t.reqs.length > 0 && (<><dt>관련 요구사항</dt><dd>{t.reqs.map((r) => <div key={r}><span className="mono muted">{r}</span> {reqText(r)}</div>)}</dd></>)}
-              </dl>
-              {t.why && <div className="why">왜 필요한가: {t.why}</div>}
-              </>}
-              <div className="gapcard-foot"><Importance a={testAsil(t, s.sgA)} /><span className="more">{compact ? "조건·근거 보기 →" : "근거 보기 →"}</span></div>
-            </TestButton>
-          </li>
+            <li key={t.id} className={`gapcard ${s.status[t.id]} ${isOpen ? "expanded" : "collapsed"}`}>
+              <button type="button" className="gapcard-btn linkish" onClick={() => setExpanded(isOpen ? null : t.id)} aria-expanded={isOpen} aria-controls={`gap-detail-${t.id}`}>
+                <div className="gapcard-top">
+                  <PriorityBadge p={s.prio[t.id]} />
+                  <StatusPill st={s.status[t.id]} />
+                  <AssumeTag t={t} premises={data.premises} />
+                  <span className="spacer" />
+                  <span className="small muted">{catLabel(t.cat)} · {t.id}</span>
+                </div>
+                <div className="gapcard-title">{t.title}</div>
+                <div className="gapcard-foot">
+                  <Importance a={testAsil(t, s.sgA)} />
+                  <span className="more">{isOpen ? "상세 접기 ↑" : "시험 조건·근거 보기 →"}</span>
+                </div>
+              </button>
+              {isOpen && (
+                <div className="gapcard-expanded" id={`gap-detail-${t.id}`}>
+                  <dl className="kv">
+                    <dt>시험 조건</dt><dd>{t.condition}</dd>
+                    <dt>판정 기준</dt><dd>{t.criteria}</dd>
+                    {t.reqs.length > 0 && <><dt>관련 요구사항</dt><dd>{t.reqs.map((r) => <div key={r}><span className="mono muted">{r}</span> {reqText(r)}</div>)}</dd>}
+                    {t.sgs.length > 0 && <><dt>안전 목표</dt><dd>{t.sgs.join(" · ")}</dd></>}
+                  </dl>
+                  {t.why && <p className="why">보완이 필요한 이유: {t.why}</p>}
+                  <button type="button" className="btn detail-link" onClick={() => open(t.id)}>추적 정보와 상세 근거 열기</button>
+                </div>
+              )}
+            </li>
           );
         })}
       </ul>
     </section>
   );
 }
-
 /* ---------- 계획 비교 ---------- */
 export function GapCompare({ data, s }: { data: CaseData; s: S }) {
   const [onlyGap, setOnlyGap] = useState(false);
