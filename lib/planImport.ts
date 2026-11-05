@@ -1,6 +1,23 @@
 // 시험 계획 파일(CSV / JSON / Excel / TXT)을 표 형태(행 × 열 문자열)로 읽는다. 모두 브라우저 안에서 처리한다.
 export type Table = string[][];
 
+/** Conservatively split a plan line. Unclear portions stay in the title and are flagged for review. */
+export function normalizePlanLine(input: string) {
+  let text = input.trim();
+  let originalId = "";
+  const idMatch = text.match(/^\[([^\]]+)\]\s*|^((?:TC|TEST|CASE)[-_][\w.-]+)\s*[:：-]\s*/i);
+  if (idMatch) { originalId = (idMatch[1] || idMatch[2] || "").trim(); text = text.slice(idMatch[0].length).trim(); }
+  const parts = text.split(/\s*(?:→|->|⇒)\s*/, 2);
+  let title = parts[0] || "", condition = "", criteria = parts[1] || "";
+  const paren = title.match(/^(.*?)\s*[（(]([^()（）]+)[）)]\s*$/);
+  if (paren) { title = paren[1].trim(); condition = paren[2].trim(); }
+  const review: string[] = [];
+  if (!title) review.push("시험 항목 확인 필요");
+  if (!condition) review.push("시험 조건 확인 필요");
+  if (!criteria) review.push("판정 기준 확인 필요");
+  return { originalId: originalId || undefined, title, condition, criteria, review };
+}
+
 export function parseCsv(text: string): Table {
   const rows: Table = [];
   let row: string[] = [], cell = "", q = false;

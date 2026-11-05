@@ -167,7 +167,9 @@ export function GapCompare({ data, s }: { data: CaseData; s: S }) {
             const entries = Object.entries(p.covers);
             return (
               <div key={p.id} className="plan-item">
+                {p.originalId && <div className="small muted">원본 ID: {p.originalId} · 내부 참조: {p.temporaryId ?? p.id}</div>}
                 <div className="t">{p.text}</div>
+                {p.review?.length ? <div className="small warn-t" style={{ marginTop: 4 }}>확인 필요: {p.review.join(" · ")}</div> : null}
                 <div className="small" style={{ marginTop: 4 }}>
                   {entries.length === 0 ? (
                     <span className="muted">대응되는 제안 항목 없음</span>

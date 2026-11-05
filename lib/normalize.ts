@@ -1,4 +1,5 @@
 import type { Analysis, Category, GapResult, Premise, PremiseKind, Stage } from "./types";
+import { normalizePlanLine } from "./planImport";
 
 const CATS: Category[] = ["env", "func", "comm", "fault", "misuse"];
 const STAGES: Stage[] = ["sensor", "process", "actuator", "support"];
@@ -72,7 +73,8 @@ export function normalizeGap(raw: any, a: Analysis, planLines: string[], premise
     const covers: Record<string, "full" | "partial"> = {};
     for (const [k, v] of Object.entries(p?.covers ?? {}))
       if (testIds.has(k) && (v === "full" || v === "partial")) covers[k] = v;
-    return { id: pad("P", i), text: text.slice(0, 200), covers };
+    const parsed = normalizePlanLine(text);
+    return { id: `tmp-plan-${i + 1}`, temporaryId: `tmp-plan-${i + 1}`, text: text.slice(0, 200), ...parsed, covers };
   });
   return { tests, plan };
 }

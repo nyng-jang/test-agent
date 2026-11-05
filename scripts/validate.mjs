@@ -1,8 +1,9 @@
 // 기획서 검증 기준 + 데이터 무결성 검사. 실행: npm run validate
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const dir = new URL("../data/cases/", import.meta.url).pathname;
+const dir = fileURLToPath(new URL("../data/cases/", import.meta.url));
 const cases = readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => JSON.parse(readFileSync(join(dir, f), "utf8")));
 const CATS = ["env", "func", "comm", "fault", "misuse"];
 let failed = 0;

@@ -13,7 +13,7 @@ export interface TestItem {
   /** 이 시험이 기대는 분석 전제(보완 질문 id). 가정이 바뀌면 다시 봐야 하는 시험 */
   assumes?: string[];
 }
-export interface PlanItem { id: string; text: string; covers: Record<string, CoverLevel> }
+export interface PlanItem { id: string; originalId?: string; temporaryId?: string; text: string; title?: string; condition?: string; criteria?: string; review?: string[]; covers: Record<string, CoverLevel> }
 export interface Question { id: string; q: string; why: string; assumption: string }
 export interface Fact { q: string; a: string }
 

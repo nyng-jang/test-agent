@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Shell, { StepHead, useStepState } from "@/components/Shell";
 import { flowPremises, gapKeyOf, useFlow } from "@/lib/flow";
-import { guessColumns, readPlanFile, toLines, type Table } from "@/lib/planImport";
+import { guessColumns, normalizePlanLine, readPlanFile, toLines, type Table } from "@/lib/planImport";
 import { AiProgress } from "@/components/AiProgress";
 import { TabPanel, Tabs } from "@/components/Tabs";
 
@@ -20,7 +20,10 @@ function PlanStep() {
   const { mode, flow, update, setRemaining } = useFlow();
   const { analysisOk, gapOk } = useStepState();
   const router = useRouter();
-  const [tab, setTab] = useState<"text" | "file">("text");
+  const [tab, setTab] = useState<"text" | "file" | "fields">("text");
+  const [fieldTitle, setFieldTitle] = useState("");
+  const [fieldCondition, setFieldCondition] = useState("");
+  const [fieldCriteria, setFieldCriteria] = useState("");
   const [text, setText] = useState(flow.planLines.join("\n"));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -38,6 +41,7 @@ function PlanStep() {
   const premises = flowPremises(flow);
   const key = gapKeyOf(flow.analysis, lines, premises);
   const bareCount = lines.filter(bare).length;
+  const reviewCount = lines.filter((line) => normalizePlanLine(line).review.length > 0).length;
   const setLines = (ls: string[]) => { setText(ls.join("\n")); update({ planLines: ls }); };
 
   const detect = async () => {
@@ -86,15 +90,16 @@ function PlanStep() {
       </details>
 
       <div style={{ marginTop: 14 }}>
-        <Tabs idPrefix="plan" label="계획 입력 방식" value={tab} onChange={(v) => setTab(v as "text" | "file")}
-          tabs={[{ id: "text", label: "한 줄씩 입력" }, { id: "file", label: "파일 불러오기 (CSV · JSON · Excel)" }]} />
+        <Tabs idPrefix="plan" label="계획 입력 방식" value={tab} onChange={(v) => setTab(v as "text" | "file" | "fields")}
+          tabs={[{ id: "text", label: "자유 형식 (권장)" }, { id: "file", label: "파일 가져오기" }, { id: "fields", label: "항목별 직접 작성" }]} />
       </div>
 
       <TabPanel idPrefix="plan" id={tab}>
         <section className="section">
           {tab === "text" ? (
             <div className="card">
-              <label className="f" htmlFor="plan" style={{ marginTop: 0 }}>시험 항목 (한 줄에 하나)</label>
+              <label className="f" htmlFor="plan" style={{ marginTop: 0 }}>시험 계획을 자유롭게 입력해 주세요</label>
+              <p className="small muted">시험 ID나 정해진 항목명이 없어도 됩니다. 내용을 항목·조건·판정 기준으로 정리하고 빠진 정보는 확인 필요로 표시합니다.</p>
               <textarea id="plan" value={text} readOnly={!live} style={{ minHeight: 220 }}
                 onChange={(e) => setText(e.target.value)}
                 onBlur={() => update({ planLines: lines })}
@@ -102,10 +107,19 @@ function PlanStep() {
               <div className="small muted" style={{ marginTop: 4 }}>
                 {lines.length}개 항목
                 {bareCount > 0 && <> · <span className="warn-t">조건·기준 없이 이름만 있는 항목 {bareCount}개</span></>}
+                {reviewCount > 0 && <> · <span className="warn-t">확인 필요 정보가 있는 항목 {reviewCount}개</span></>}
               </div>
             </div>
-          ) : (
+          ) : tab === "file" ? (
             <FileImport disabled={!live} onApply={(ls, replace) => { setLines(replace ? ls : [...lines, ...ls]); setTab("text"); }} />
+          ) : (
+            <div className="card">
+              <label className="f" htmlFor="field-title">시험 항목</label><input id="field-title" value={fieldTitle} onChange={e => setFieldTitle(e.target.value)} placeholder="예: 통신 단절 시 모터 정지" />
+              <label className="f" htmlFor="field-condition">시험 조건</label><input id="field-condition" value={fieldCondition} onChange={e => setFieldCondition(e.target.value)} placeholder="예: 정지 명령 전송 후" />
+              <label className="f" htmlFor="field-criteria">판정 기준</label><input id="field-criteria" value={fieldCriteria} onChange={e => setFieldCriteria(e.target.value)} placeholder="예: 1초 이내 모터 전원 차단" />
+              <button className="btn" disabled={!live || !fieldTitle.trim()} onClick={() => { const line = `${fieldTitle.trim()}${fieldCondition.trim() ? ` (${fieldCondition.trim()})` : ""}${fieldCriteria.trim() ? ` → ${fieldCriteria.trim()}` : ""}`; setLines([...lines, line]); setFieldTitle(""); setFieldCondition(""); setFieldCriteria(""); }}>계획에 항목 추가</button>
+              <p className="small muted">ID 입력은 선택 사항이며 필요하지 않습니다. 조건이나 판정 기준이 비어 있으면 확인 필요로 표시합니다.</p>
+            </div>
           )}
           {!live && <div className="notice" style={{ marginTop: 10 }}>데모에서는 예시 계획으로 진행합니다. 내 계획을 넣으려면 로그인하세요.</div>}
         </section>
