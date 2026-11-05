@@ -483,3 +483,111 @@ footer { max-width: 1120px; line-height: 1.7; }
   .stat .v { font-size: 24px; }
   .stat .l { font-size: 11px; }
 }
+
+
+/* Approved three-step preview: clear page frame, step workspace and decision cards */
+.workflow-panel {
+  margin: 28px auto 40px;
+  padding: clamp(22px, 3.2vw, 38px);
+  border: 1px solid #e2e8f0;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 18px 48px rgba(27, 43, 74, .07);
+}
+.workflow-panel > .step-head {
+  padding: 0 0 24px;
+  margin: 0 0 24px;
+  border-bottom: 1px solid #e8edf4;
+}
+.workflow-panel .step-head h1 { margin-bottom: 0; }
+.workflow-panel .section { margin: 22px 0 28px; }
+.workflow-panel .section > h2 { font-size: 18px; letter-spacing: -.02em; margin-bottom: 6px; }
+.workflow-panel .desc { line-height: 1.65; }
+.workflow-panel .presets {
+  padding: 13px 15px;
+  margin-bottom: 14px;
+  border: 1px solid #e5eaf2;
+  border-radius: 13px;
+  background: #f8faff;
+}
+.workflow-panel .system-input-card {
+  border: 1px solid #e1e8f2;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(27,43,74,.045);
+}
+.workflow-panel .analysis-overview {
+  padding: 20px 22px;
+  border: 1px solid #e3e9f2;
+  border-radius: 15px;
+  background: #f9fbff;
+}
+.workflow-panel .analysis-overview h2 { margin-top: 0; }
+.workflow-panel .guide {
+  border-color: #e2e8f0;
+  border-radius: 13px;
+  background: #fbfcff;
+}
+.workflow-panel .subtabs {
+  display: flex;
+  gap: 7px;
+  padding: 6px;
+  border: 1px solid #e1e7f0;
+  border-radius: 13px;
+  background: #f4f7fb;
+}
+.workflow-panel .subtab {
+  flex: 1;
+  min-height: 42px;
+  border: 0;
+  border-radius: 9px;
+  border-bottom: 0;
+  padding: 9px 12px;
+}
+.workflow-panel .subtab[aria-selected="true"] {
+  color: #244fc4;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(27,43,74,.09);
+}
+.workflow-panel .tabs-wrap { margin-top: 0; }
+.workflow-panel .tabpanel { padding-top: 8px; }
+.workflow-panel .drop { padding: 30px 20px; }
+.workflow-panel .result-summary { margin-top: 8px; }
+.workflow-panel .result-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.workflow-panel .stat.total { border-top: 3px solid #315bd6; }
+.workflow-panel .stat.warn { border-top: 3px solid #d69a24; }
+.workflow-panel .stat.gap { border-top: 3px solid #cf5148; }
+.workflow-panel .stat.coverage { border-top: 3px solid #39845c; }
+.workflow-panel .stat .hint { margin-top: 5px; color: #68758a; font-size: 11px; }
+.workflow-panel .gaplist-toolbar { align-items: flex-end; margin: 20px 0 14px; }
+.workflow-panel .gapcard-btn {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.workflow-panel .gapcard-btn:hover { background: #fbfcff; }
+.workflow-panel .gapcard-expanded {
+  padding: 0 18px 18px;
+  border-top: 1px solid #edf0f5;
+  background: #fcfdff;
+}
+.workflow-panel .gapcard-expanded .kv { padding-top: 12px; }
+.workflow-panel .gapcard-expanded .why { margin: 10px 0; }
+.workflow-panel .detail-link { margin-top: 8px; }
+.workflow-panel .gapcard { transition: border-color .15s, box-shadow .15s; }
+.workflow-panel .gapcard.expanded { border-color: #b9c8e8; box-shadow: 0 8px 22px rgba(35,70,140,.07); }
+.workflow-panel .gapcard.collapsed .gapcard-btn { padding-top: 14px; padding-bottom: 14px; }
+.workflow-panel .actions { padding-top: 8px; }
+@media (max-width: 760px) {
+  .workflow-panel { margin: 16px auto 28px; padding: 20px 16px; border-radius: 17px; }
+  .workflow-panel > .step-head { padding-bottom: 18px; margin-bottom: 18px; }
+  .workflow-panel .result-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .workflow-panel .gaplist-toolbar { align-items: stretch; }
+  .workflow-panel .gaplist-toolbar > * { width: 100%; }
+  .workflow-panel .subtabs { flex-direction: column; }
+  .workflow-panel .subtab { flex: none; text-align: left; }
+}
