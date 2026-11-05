@@ -58,7 +58,7 @@ export default function Shell({ step, children }: { step: 1 | 2 | 3; children: R
           </div>
         </div>
       </header>
-      <main id="main" className="wrap">{children}</main>
+      <main id="main" className="wrap"><div className="workflow-panel">{children}</div></main>
       <footer className="wrap">
         카테고리는 일반적인 시험 분류(환경 / 기능 / 통신 / 고장·Fail-safe / 오작동)로 구성했고 규격 원문은 인용하지 않았습니다. 기능안전 부분은 ISO 26262의 HARA·ASIL 개념을 자작 시스템에 적용해 본 것이며 규격 준수를 뜻하지 않습니다. 시험 수치는 예시 값입니다.
       </footer>
