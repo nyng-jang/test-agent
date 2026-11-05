@@ -1,38 +1,164 @@
 "use client";
 
-import { useState } from "react";
-import type { CaseData, Category, TestItem } from "@/lib/types";
-import { CATEGORIES, STAGES } from "@/lib/types";
-import { asilRank, hazardAsil, matrix, summary, testAsil, traceCsv, type TestStatus } from "@/lib/analysis";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import type { Asil as AsilT, CaseData, Category, Premise, TestItem } from "@/lib/types";
+import { CATEGORIES, PREMISE_LABEL, STAGES } from "@/lib/types";
+import {
+  asilRank, hazardAsil, matrix, PRIORITY_LABEL, summary, testAsil, traceCsv,
+  type CellStatus, type Priority, type TestStatus,
+} from "@/lib/analysis";
 
-const ST_LABEL: Record<TestStatus, string> = { full: "계획에 있음", partial: "부분 반영", missing: "누락" };
-const catLabel = (c: Category) => CATEGORIES.find((x) => x.id === c)!.label;
+export type S = ReturnType<typeof summary>;
+export const ST_LABEL: Record<TestStatus, string> = { full: "계획에 있음", partial: "부분 반영", missing: "누락" };
+const catLabel = (c: Category) => CATEGORIES.find((x) => x.id === c)?.label ?? c;
 
+/* ---------- 상세 패널 열기 ---------- */
+const DetailCtx = createContext<(id: string) => void>(() => {});
+export const DetailProvider = DetailCtx.Provider;
+const useOpen = () => useContext(DetailCtx);
+
+/* ---------- 배지: 계획 상태 / 보완 우선순위 / 안전 중요도는 서로 다른 정보라 모양을 다르게 ---------- */
+export function StatusPill({ st }: { st: TestStatus }) {
+  return <span className={`pill ${st}`}>{ST_LABEL[st]}</span>;
+}
+export function PriorityBadge({ p }: { p: Priority | null }) {
+  if (!p) return null;
+  return <span className={`prio prio-${p}`} title="보완 우선순위: 계획 상태와 안전 중요도를 함께 본 판단">우선순위 {PRIORITY_LABEL[p]}</span>;
+}
+export function Importance({ a }: { a: AsilT | string }) {
+  return (
+    <span className="imp" title="안전 중요도(참고): 연결된 안전 목표의 ASIL. HARA 개념을 적용해 본 값이며 공식 산정이 아닙니다.">
+      안전 중요도 <b className={`asil-${a}`}>{a === "QM" ? "QM" : `ASIL ${a}`}</b>
+    </span>
+  );
+}
+/** 위험·안전 목표 표에서 쓰는 작은 ASIL 표시 */
 export function Asil({ a }: { a: string }) {
   return <span className={`badge asil-${a}`}>{a === "QM" ? "QM" : `ASIL ${a}`}</span>;
 }
+function AssumeTag({ t, premises }: { t: TestItem; premises?: Premise[] }) {
+  const ps = (t.assumes ?? []).map((id) => premises?.find((p) => p.id === id)).filter((p): p is Premise => !!p && p.kind !== "fact");
+  if (!ps.length) return null;
+  const unknown = ps.some((p) => p.kind === "unknown");
+  return <span className={`ptag ${unknown ? "unknown" : "assume"}`}>{unknown ? "확인 필요 전제" : "AI 가정 기반"}</span>;
+}
 
-export function Overview({ data, s }: { data: CaseData; s: S }) {
+function TestButton({ t, className, children }: { t: TestItem; className?: string; children: React.ReactNode }) {
+  const open = useOpen();
+  return (
+    <button type="button" className={`linkish ${className ?? ""}`} onClick={() => open(t.id)} aria-label={`${t.id} ${t.title} 상세 보기`}>
+      {children}
+    </button>
+  );
+}
+
+/* ---------- 요약 숫자 ---------- */
+export function Overview({ s }: { s: S }) {
   const coveragePct = Math.round(((s.full + s.partial * 0.5) / Math.max(1, s.total)) * 100);
   return (
     <div className="stats">
-      <div className="stat"><div className="v">{s.total}</div><div className="l">에이전트 제안 시험</div></div>
-      <div className="stat ok"><div className="v">{s.full}</div><div className="l">내 계획에 있음</div></div>
+      <div className="stat gap"><div className="v">{s.missingCount}</div><div className="l">누락</div></div>
       <div className="stat warn"><div className="v">{s.partial}</div><div className="l">부분 반영</div></div>
-      <div className="stat gap"><div className="v">{s.missingCount}</div><div className="l">누락 · 커버리지 {coveragePct}%</div></div>
+      <div className="stat ok"><div className="v">{s.full}</div><div className="l">계획에 있음</div></div>
+      <div className="stat"><div className="v">{coveragePct}%</div><div className="l">커버리지 · 제안 {s.total}개 기준</div></div>
     </div>
   );
 }
 
-export type S = ReturnType<typeof summary>;
+/* ---------- 분석 전제 ---------- */
+export function PremiseSummary({ premises, tests }: { premises: Premise[]; tests: TestItem[] }) {
+  if (!premises.length) return null;
+  const count = (k: Premise["kind"]) => premises.filter((p) => p.kind === k).length;
+  const dependent = tests.filter((t) => (t.assumes ?? []).some((id) => premises.find((p) => p.id === id && p.kind !== "fact"))).length;
+  return (
+    <details className="card premise">
+      <summary>
+        <b>분석 전제</b>
+        <span className="ptag fact">사용자 확인 {count("fact")}</span>
+        <span className="ptag assume">AI 가정 {count("assume")}</span>
+        <span className="ptag unknown">확인 필요 {count("unknown")}</span>
+        {dependent > 0 && <span className="small muted">· 가정에 기대는 시험 {dependent}개</span>}
+      </summary>
+      <ul className="premise-list">
+        {premises.map((p) => (
+          <li key={p.id}>
+            <span className={`ptag ${p.kind}`}>{PREMISE_LABEL[p.kind]}</span>
+            <div><div className="small muted">{p.q}</div><div>{p.text}</div></div>
+          </li>
+        ))}
+      </ul>
+      <p className="small muted" style={{ margin: "8px 0 0" }}>AI 가정이나 확인 필요 전제에 기대는 시험은 목록에 표시됩니다. 1단계에서 답을 바꾸면 결과를 다시 만들 수 있습니다.</p>
+    </details>
+  );
+}
 
+/* ---------- 보완 항목 목록 (결과 첫 화면) ---------- */
+export function GapList({ data, s }: { data: CaseData; s: S }) {
+  const [prio, setPrio] = useState<Priority | "all">("all");
+  const [cat, setCat] = useState<Category | "all">("all");
+  if (!s.missing.length) return <div className="notice">계획에서 빠진 항목이 없습니다.</div>;
+  const list = s.missing.filter((t) => (prio === "all" || s.prio[t.id] === prio) && (cat === "all" || t.cat === cat));
+  const reqText = (id: string) => data.requirements.find((r) => r.id === id)?.text ?? "";
+  return (
+    <section className="section">
+      <div className="toolbar">
+        <h2 style={{ margin: 0, flex: 1, fontSize: 18 }}>우선 확인할 항목</h2>
+        <div className="seg" role="group" aria-label="우선순위 필터">
+          <button className="btn" aria-pressed={prio === "all"} onClick={() => setPrio("all")}>전체 {s.missing.length}</button>
+          {(["high", "mid", "low"] as Priority[]).map((p) =>
+            s.byPrio[p] ? <button key={p} className="btn" aria-pressed={prio === p} onClick={() => setPrio(p)}>{PRIORITY_LABEL[p]} {s.byPrio[p]}</button> : null,
+          )}
+        </div>
+        <label className="small">
+          <span className="sr-only">카테고리</span>
+          <select value={cat} onChange={(e) => setCat(e.target.value as Category | "all")}>
+            <option value="all">모든 카테고리</option>
+            {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+          </select>
+        </label>
+      </div>
+      <p className="desc">계획에 없거나 일부만 다룬 시험입니다. 우선순위는 계획 상태와 안전 중요도를 함께 본 판단입니다. 우선순위 높음은 조건까지 펼쳐 두고, 나머지는 제목만 보여줍니다. 항목을 누르면 근거를 볼 수 있습니다.</p>
+      <ul className="gaplist">
+        {list.map((t) => {
+          const compact = prio === "all" && s.prio[t.id] !== "high" && s.byPrio.high > 0;
+          return (
+          <li key={t.id} className={`gapcard ${s.status[t.id]} ${compact ? "compact" : ""}`}>
+            <TestButton t={t} className="gapcard-btn">
+              <div className="gapcard-top">
+                <PriorityBadge p={s.prio[t.id]} />
+                <StatusPill st={s.status[t.id]} />
+                <AssumeTag t={t} premises={data.premises} />
+                <span className="spacer" />
+                <span className="small muted">{catLabel(t.cat)} · {t.id}</span>
+              </div>
+              <div className="gapcard-title">{t.title}</div>
+              {!compact && <>
+              <dl className="kv">
+                <dt>조건</dt><dd>{t.condition}</dd>
+                <dt>판정 기준</dt><dd>{t.criteria}</dd>
+                {t.reqs.length > 0 && (<><dt>관련 요구사항</dt><dd>{t.reqs.map((r) => <div key={r}><span className="mono muted">{r}</span> {reqText(r)}</div>)}</dd></>)}
+              </dl>
+              {t.why && <div className="why">왜 필요한가: {t.why}</div>}
+              </>}
+              <div className="gapcard-foot"><Importance a={testAsil(t, s.sgA)} /><span className="more">{compact ? "조건·근거 보기 →" : "근거 보기 →"}</span></div>
+            </TestButton>
+          </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+/* ---------- 계획 비교 ---------- */
 export function GapCompare({ data, s }: { data: CaseData; s: S }) {
   const [onlyGap, setOnlyGap] = useState(false);
+  const open = useOpen();
   const title = (id: string) => data.tests.find((t) => t.id === id)?.title ?? id;
   return (
     <section className="section">
-      <h2>누락 하이라이트: 내 계획 vs 에이전트 제안</h2>
-      <p className="desc">왼쪽은 사람이 짠 계획, 오른쪽은 에이전트가 제안한 시험 항목입니다. 계획에 없는 항목은 빨간색, 일부만 다룬 항목은 노란 점선으로 표시합니다.</p>
+      <h2>내 계획 vs 에이전트 제안</h2>
+      <p className="desc">왼쪽은 내가 짠 계획, 오른쪽은 에이전트 제안입니다. 빨간 테두리는 누락, 노란 점선은 일부만 다룬 항목입니다.</p>
       <div className="compare">
         <div className="card">
           <h3>내 시험 계획 ({data.plan.length}개)</h3>
@@ -44,12 +170,12 @@ export function GapCompare({ data, s }: { data: CaseData; s: S }) {
                 <div className="t">{p.text}</div>
                 <div className="small" style={{ marginTop: 4 }}>
                   {entries.length === 0 ? (
-                    <span className="muted">대응되는 제안 항목 없음 (기준이 정량화되지 않음)</span>
+                    <span className="muted">대응되는 제안 항목 없음</span>
                   ) : (
                     entries.map(([tid, lvl]) => (
-                      <span key={tid} className={`chip ${lvl}`} title={title(tid)}>
+                      <button key={tid} type="button" className={`chip ${lvl}`} onClick={() => open(tid)} title={title(tid)}>
                         {tid} {lvl === "partial" ? "· 부분" : ""}
-                      </span>
+                      </button>
                     ))
                   )}
                 </div>
@@ -60,9 +186,7 @@ export function GapCompare({ data, s }: { data: CaseData; s: S }) {
         <div className="card">
           <div className="toolbar">
             <h3 style={{ margin: 0, flex: 1 }}>에이전트 제안 ({data.tests.length}개)</h3>
-            <button className="btn" aria-pressed={onlyGap} onClick={() => setOnlyGap((v) => !v)}>
-              누락·부분만 보기
-            </button>
+            <button className="btn" aria-pressed={onlyGap} onClick={() => setOnlyGap((v) => !v)}>누락·부분만</button>
           </div>
           {CATEGORIES.map((c) => {
             const items = data.tests.filter((t) => t.cat === c.id && (!onlyGap || s.status[t.id] !== "full"));
@@ -71,12 +195,11 @@ export function GapCompare({ data, s }: { data: CaseData; s: S }) {
               <div key={c.id} className="agent-cat">
                 <h4>{c.label}</h4>
                 {items.map((t) => (
-                  <div key={t.id} className={`agent-item ${s.status[t.id]}`}>
+                  <TestButton key={t.id} t={t} className={`agent-item ${s.status[t.id]}`}>
                     <span className="id">{t.id}</span>
                     <span className="grow">{t.title}</span>
-                    <Asil a={testAsil(t, s.sgA)} />
-                    <span className={`pill ${s.status[t.id]}`}>{ST_LABEL[s.status[t.id]]}</span>
-                  </div>
+                    <StatusPill st={s.status[t.id]} />
+                  </TestButton>
                 ))}
               </div>
             );
@@ -87,73 +210,36 @@ export function GapCompare({ data, s }: { data: CaseData; s: S }) {
   );
 }
 
-export function Priority({ data, s, limit = 5, title, desc }: { data: CaseData; s: S; limit?: number; title?: string; desc?: string }) {
-  const [cat, setCat] = useState<Category | "all">("all");
-  const list = s.missing.filter((t) => cat === "all" || t.cat === cat);
-  const top = limit ? list.slice(0, limit) : list;
-  if (!s.missing.length) return <section className="section"><div className="notice">계획에서 빠진 항목이 없습니다.</div></section>;
-  return (
-    <section className="section">
-      <h2>{title ?? "먼저 보완할 시험 항목"}</h2>
-      <p className="desc">{desc ?? `누락·부분 반영 항목 중 위험도(ASIL)가 높은 순서로 ${limit}개입니다.`}</p>
-      {!limit && (
-        <div className="toolbar">
-          <button className="btn" aria-pressed={cat === "all"} onClick={() => setCat("all")}>전체 {s.missing.length}</button>
-          {CATEGORIES.map((c) => {
-            const n = s.missing.filter((t) => t.cat === c.id).length;
-            return n ? <button key={c.id} className="btn" aria-pressed={cat === c.id} onClick={() => setCat(c.id)}>{c.label} {n}</button> : null;
-          })}
-        </div>
-      )}
-      <div className="card">
-        <ol className="priority">
-          {top.map((t) => (
-            <li key={t.id}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
-                <Asil a={testAsil(t, s.sgA)} />
-                <span className={`pill ${s.status[t.id]}`}>{ST_LABEL[s.status[t.id]]}</span>
-              </div>
-              <div>
-                <div><b>{t.title}</b> <span className="small muted">{t.id} · {catLabel(t.cat)}</span></div>
-                <div className="small"><b>조건</b> {t.condition}</div>
-                <div className="small"><b>판정</b> {t.criteria}</div>
-                <div className="small mono muted">근거 {[...t.reqs, ...t.sgs].join(" ")}</div>
-                {t.why && <div className="why">왜 필요한가: {t.why}</div>}
-              </div>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </section>
-  );
-}
-
-export function CoverageMatrix({ data, status }: { data: CaseData; status: Record<string, TestStatus> }) {
-  const rows = matrix(data, status);
-  const label = { covered: "반영", partial: "부분", gap: "누락", none: "–" } as const;
+/* ---------- 커버리지 매트릭스 ---------- */
+export function CoverageMatrix({ data, s }: { data: CaseData; s: S }) {
+  const rows = matrix(data, s.status);
+  const [sel, setSel] = useState<{ r: string; c: Category } | null>(null);
+  const label: Record<CellStatus, string> = { covered: "반영", partial: "부분", gap: "누락", none: "–" };
+  const selCell = sel ? rows.find((r) => r.req.id === sel.r)?.cells.find((c) => c.cat === sel.c) : null;
   return (
     <section className="section">
       <h2>커버리지 매트릭스</h2>
-      <p className="desc">행은 요구사항, 열은 시험 카테고리입니다. 칸 숫자는 에이전트가 제안한 시험 수이고, 색은 내 계획이 그 칸을 얼마나 다뤘는지입니다.</p>
+      <p className="desc">행은 요구사항, 열은 시험 카테고리입니다. 숫자는 제안 시험 수, 색은 내 계획이 그 칸을 얼마나 다뤘는지입니다. 칸을 누르면 해당 시험이 아래에 나옵니다.</p>
       <div className="card matrix-wrap">
         <table className="matrix">
           <thead>
             <tr>
-              <th className="req">요구사항</th>
-              {CATEGORIES.map((c) => <th key={c.id}>{c.label}</th>)}
+              <th className="req" scope="col">요구사항</th>
+              {CATEGORIES.map((c) => <th key={c.id} scope="col">{c.label}</th>)}
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.req.id}>
-                <td className="req"><b>{r.req.id}</b>{r.req.text}</td>
+                <th scope="row" className="req"><b>{r.req.id}</b>{r.req.text}</th>
                 {r.cells.map((cell) => (
-                  <td
-                    key={cell.cat}
-                    className={`cell ${cell.status}`}
-                    title={cell.tests.map((t) => `${t.id} ${t.title} (${ST_LABEL[status[t.id]]})`).join("\n") || "해당 시험 없음"}
-                  >
-                    {cell.tests.length ? `${label[cell.status]} ${cell.tests.length}` : label.none}
+                  <td key={cell.cat} className={`cell ${cell.status} ${sel?.r === r.req.id && sel?.c === cell.cat ? "sel" : ""}`}>
+                    {cell.tests.length ? (
+                      <button type="button" className="cell-btn" onClick={() => setSel({ r: r.req.id, c: cell.cat })}
+                        aria-label={`${r.req.id} ${catLabel(cell.cat)}: ${label[cell.status]} ${cell.tests.length}개`}>
+                        {label[cell.status]} {cell.tests.length}
+                      </button>
+                    ) : label.none}
                   </td>
                 ))}
               </tr>
@@ -166,11 +252,22 @@ export function CoverageMatrix({ data, status }: { data: CaseData; status: Recor
           <span className="gap">전부 누락</span>
           <span className="none">해당 시험 없음</span>
         </div>
+        {selCell && (
+          <div style={{ marginTop: 12 }}>
+            <div className="small muted" style={{ marginBottom: 6 }}>{sel!.r} × {catLabel(sel!.c)}</div>
+            {selCell.tests.map((t) => (
+              <TestButton key={t.id} t={t} className={`agent-item ${s.status[t.id]}`}>
+                <span className="id">{t.id}</span><span className="grow">{t.title}</span><StatusPill st={s.status[t.id]} />
+              </TestButton>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
 }
 
+/* ---------- 블록도 ---------- */
 export function BlockDiagram({ data, status, plain }: { data: Pick<CaseData, "blocks" | "tests">; status?: Record<string, TestStatus>; plain?: boolean }) {
   const [sel, setSel] = useState<string | null>(null);
   const testsFor = (bid: string) => data.tests.filter((t) => t.blocks.includes(bid));
@@ -179,7 +276,7 @@ export function BlockDiagram({ data, status, plain }: { data: Pick<CaseData, "bl
     const ts = testsFor(b.id);
     const g = ts.filter((t) => status[t.id] !== "full").length;
     return (
-      <button key={b.id} className={`block ${sel === b.id ? "sel" : ""} ${g ? "has-gap" : ""}`} onClick={() => setSel(sel === b.id ? null : b.id)}>
+      <button key={b.id} type="button" className={`block ${sel === b.id ? "sel" : ""} ${g ? "has-gap" : ""}`} aria-pressed={sel === b.id} onClick={() => setSel(sel === b.id ? null : b.id)}>
         <div style={{ fontWeight: 600, fontSize: 14 }}>{b.label}</div>
         <div className="n">시험 {ts.length} · {g ? <b className="g">보완 {g}</b> : "보완 0"}</div>
       </button>
@@ -190,7 +287,7 @@ export function BlockDiagram({ data, status, plain }: { data: Pick<CaseData, "bl
   return (
     <section className="section">
       {!plain && <><h2>시스템 블록도</h2>
-      <p className="desc">센서 → 처리 → 액추에이터 흐름에서 각 시험이 어디에 걸리는지 보여줍니다. 블록을 누르면 해당 시험 목록이 나옵니다. 왼쪽 빨간 띠는 보완이 필요한 블록입니다.</p></>}
+      <p className="desc">센서 → 처리 → 액추에이터 흐름에서 각 시험이 어디에 걸리는지 보여줍니다. 왼쪽 빨간 띠는 보완이 필요한 블록입니다. 블록을 누르면 걸린 시험이 나옵니다.</p></>}
       <div className="card">
         <div className="flow">
           {STAGES.map((st, i) => (
@@ -209,11 +306,9 @@ export function BlockDiagram({ data, status, plain }: { data: Pick<CaseData, "bl
           <div style={{ marginTop: 12 }}>
             <div className="small muted" style={{ marginBottom: 6 }}>{selBlock.label}에 걸린 시험</div>
             {testsFor(selBlock.id).map((t) => (
-              <div key={t.id} className={`agent-item ${status![t.id]}`}>
-                <span className="id">{t.id}</span>
-                <span className="grow">{t.title}</span>
-                <span className={`pill ${status![t.id]}`}>{ST_LABEL[status![t.id]]}</span>
-              </div>
+              <TestButton key={t.id} t={t} className={`agent-item ${status![t.id]}`}>
+                <span className="id">{t.id}</span><span className="grow">{t.title}</span><StatusPill st={status![t.id]} />
+              </TestButton>
             ))}
           </div>
         )}
@@ -234,15 +329,17 @@ function FlowCol({ title, last, children }: { title: string; last: boolean; chil
   );
 }
 
+/* ---------- 기능안전 추적 ---------- */
 export function SafetyTrace({ data, s }: { data: CaseData; s: S }) {
+  const open = useOpen();
   return (
     <section className="section">
-      <h2>기능안전 추적: 위험 → 안전 목표 → 시험 항목</h2>
+      <h2>기능안전 추적: 위험 → 안전 목표 → 시험</h2>
       <p className="desc">
-        ISO 26262의 HARA 개념을 적용해봤습니다(공식 적용 대상이 아니므로 &ldquo;준수&rdquo;가 아니라 개념 적용). 위험마다 심각도(S)·노출(E)·제어 가능성(C)을 매기고, 그 조합으로 ASIL을 정한 뒤, 안전 목표와 그것을 확인하는 시험 항목으로 이어 붙였습니다.
+        ISO 26262의 HARA 개념을 적용해 봤습니다(규격 준수가 아니라 개념 적용). 위험마다 심각도(S)·노출(E)·제어 가능성(C)을 매겨 안전 중요도(ASIL)를 정하고, 안전 목표와 그것을 확인하는 시험으로 이었습니다.
       </p>
       <div className="card">
-        <div className="trace-head"><span>위험 (HARA)</span><span /><span>안전 목표</span><span /><span>확인하는 시험 항목</span></div>
+        <div className="trace-head"><span>위험</span><span /><span>안전 목표</span><span /><span>확인하는 시험</span></div>
         {data.safetyGoals.map((sg) => {
           const hz = data.hazards.filter((h) => h.sg === sg.id);
           const tests = data.tests.filter((t) => t.sgs.includes(sg.id));
@@ -253,25 +350,25 @@ export function SafetyTrace({ data, s }: { data: CaseData; s: S }) {
                   <div key={h.id} className="node hz">
                     <div className="k"><span>{h.id} · {h.situation}</span><Asil a={hazardAsil(h)} /></div>
                     <div>{h.text}</div>
-                    <div className="mono muted" style={{ marginTop: 2 }}>S{h.S} · E{h.E} · C{h.C} → {hazardAsil(h)}</div>
+                    <div className="mono muted" style={{ marginTop: 2 }}>S{h.S} · E{h.E} · C{h.C}</div>
                   </div>
                 ))}
               </div>
-              <div className="arrow">→</div>
+              <div className="arrow" aria-hidden>→</div>
               <div className="node sg">
                 <div className="k"><span>{sg.id}</span><Asil a={s.sgA[sg.id]} /></div>
                 <div>{sg.text}</div>
                 <div className="small muted" style={{ marginTop: 2 }}>안전 상태: {sg.safeState}</div>
               </div>
-              <div className="arrow">→</div>
+              <div className="arrow" aria-hidden>→</div>
               <div className="node">
                 {tests.length === 0 ? (
                   <span className="pill missing">이 안전 목표를 확인하는 시험이 없음</span>
                 ) : (
                   tests.map((t) => (
-                    <span key={t.id} className={`chip ${s.status[t.id]}`} title={`${t.title} (${ST_LABEL[s.status[t.id]]})`}>
+                    <button key={t.id} type="button" className={`chip ${s.status[t.id]}`} onClick={() => open(t.id)} title={ST_LABEL[s.status[t.id]]}>
                       {t.id} {t.title}
-                    </span>
+                    </button>
                   ))
                 )}
               </div>
@@ -279,20 +376,21 @@ export function SafetyTrace({ data, s }: { data: CaseData; s: S }) {
           );
         })}
         <p className="small muted" style={{ marginBottom: 0 }}>
-          ASIL 산정은 S·E·C 등급을 합산하는 단순화된 방식(합 10=D, 9=C, 8=B, 7=A, 그 이하 QM)으로 표현했습니다. 등급 값은 이 사례에 대한 저의 판단입니다.
+          ASIL은 S·E·C 조합표를 합산식(합 10=D, 9=C, 8=B, 7=A, 그 이하 QM)으로 옮겨 계산했습니다. S·E·C 등급은 이 사례에 대한 판단이므로 참고용입니다.
         </p>
       </div>
     </section>
   );
 }
 
+/* ---------- 전체 시험 목록 ---------- */
 export function TestTable({ data, s }: { data: CaseData; s: S }) {
   const [cat, setCat] = useState<Category | "all">("all");
   const list: TestItem[] = data.tests.filter((t) => cat === "all" || t.cat === cat);
   return (
     <section className="section">
-      <h2>시험 항목 상세</h2>
-      <p className="desc">카테고리별 시험 조건, 판정 기준, 근거 요구사항입니다. 수치는 예시 값입니다.</p>
+      <h2>전체 시험 목록</h2>
+      <p className="desc">에이전트가 제안한 모든 시험입니다. 행을 누르면 상세가 열립니다. 수치는 예시 값입니다.</p>
       <div className="toolbar">
         <button className="btn" aria-pressed={cat === "all"} onClick={() => setCat("all")}>전체 {data.tests.length}</button>
         {CATEGORIES.map((c) => (
@@ -304,22 +402,18 @@ export function TestTable({ data, s }: { data: CaseData; s: S }) {
       <div className="card tbl-wrap" style={{ padding: 0 }}>
         <table className="tbl">
           <thead>
-            <tr><th>ID</th><th>시험 항목</th><th>시험 조건</th><th>판정 기준</th><th>근거</th><th>내 계획</th></tr>
+            <tr><th scope="col">ID</th><th scope="col">시험 항목</th><th scope="col">시험 조건</th><th scope="col">판정 기준</th><th scope="col">내 계획</th></tr>
           </thead>
           <tbody>
-            {list
-              .slice()
-              .sort((a, b) => (cat === "all" ? 0 : asilRank(testAsil(b, s.sgA)) - asilRank(testAsil(a, s.sgA))))
-              .map((t) => (
-                <tr key={t.id} className={s.status[t.id]}>
-                  <td className="mono">{t.id}</td>
-                  <td><b>{t.title}</b><div style={{ marginTop: 4 }}><Asil a={testAsil(t, s.sgA)} /></div></td>
-                  <td>{t.condition}</td>
-                  <td>{t.criteria}</td>
-                  <td className="mono">{[...t.reqs, ...t.sgs].join(" ")}</td>
-                  <td><span className={`pill ${s.status[t.id]}`}>{ST_LABEL[s.status[t.id]]}</span></td>
-                </tr>
-              ))}
+            {list.slice().sort((a, b) => (cat === "all" ? 0 : asilRank(testAsil(b, s.sgA)) - asilRank(testAsil(a, s.sgA)))).map((t) => (
+              <tr key={t.id} className={s.status[t.id]}>
+                <td className="mono">{t.id}</td>
+                <td><TestButton t={t}><b>{t.title}</b></TestButton><div className="small muted">{catLabel(t.cat)}</div></td>
+                <td>{t.condition}</td>
+                <td>{t.criteria}</td>
+                <td><StatusPill st={s.status[t.id]} /></td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -327,7 +421,9 @@ export function TestTable({ data, s }: { data: CaseData; s: S }) {
   );
 }
 
-export function TraceTable({ data, status }: { data: CaseData; status: Record<string, TestStatus> }) {
+/* ---------- 추적표 ---------- */
+export function TraceTable({ data, s }: { data: CaseData; s: S }) {
+  const open = useOpen();
   const download = () => {
     const blob = new Blob([traceCsv(data)], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -339,18 +435,18 @@ export function TraceTable({ data, status }: { data: CaseData; status: Record<st
   };
   return (
     <section className="section">
-      <h2>요구사항 ↔ 시험항목 추적표</h2>
       <div className="toolbar">
-        <p className="desc" style={{ margin: 0, flex: 1 }}>요구사항마다 어떤 시험이 그것을 확인하는지, 내 계획에 반영됐는지 보여줍니다.</p>
+        <h2 style={{ margin: 0, flex: 1 }}>요구사항 ↔ 시험 추적표</h2>
         <button className="btn primary" onClick={download}>CSV 내려받기</button>
       </div>
+      <p className="desc">요구사항마다 어떤 시험이 그것을 확인하는지, 내 계획에 반영됐는지 보여줍니다.</p>
       <div className="card tbl-wrap" style={{ padding: 0 }}>
         <table className="tbl">
-          <thead><tr><th>요구사항</th><th>내용</th><th>시험 항목</th><th>반영</th></tr></thead>
+          <thead><tr><th scope="col">요구사항</th><th scope="col">내용</th><th scope="col">시험</th><th scope="col">반영</th></tr></thead>
           <tbody>
             {data.requirements.map((r) => {
               const ts = data.tests.filter((t) => t.reqs.includes(r.id));
-              const done = ts.filter((t) => status[t.id] === "full").length;
+              const done = ts.filter((t) => s.status[t.id] === "full").length;
               return (
                 <tr key={r.id}>
                   <td className="mono">{r.id}</td>
@@ -358,7 +454,7 @@ export function TraceTable({ data, status }: { data: CaseData; status: Record<st
                   <td>
                     {ts.length === 0 && <span className="pill missing">확인하는 시험 없음</span>}
                     {ts.map((t) => (
-                      <span key={t.id} className={`chip ${status[t.id]}`} title={t.title}>{t.id}</span>
+                      <button key={t.id} type="button" className={`chip ${s.status[t.id]}`} title={t.title} onClick={() => open(t.id)}>{t.id}</button>
                     ))}
                   </td>
                   <td className="mono">{done}/{ts.length}</td>
@@ -372,11 +468,12 @@ export function TraceTable({ data, status }: { data: CaseData; status: Record<st
   );
 }
 
+/* ---------- 1단계 위험 표 ---------- */
 export function HazardTable({ a }: { a: Pick<CaseData, "hazards" | "safetyGoals"> }) {
   return (
     <div className="tbl-wrap">
       <table className="tbl">
-        <thead><tr><th>위험</th><th>상황</th><th>S·E·C</th><th>ASIL</th><th>안전 목표</th></tr></thead>
+        <thead><tr><th scope="col">위험</th><th scope="col">상황</th><th scope="col">S·E·C</th><th scope="col">ASIL (참고)</th><th scope="col">안전 목표</th></tr></thead>
         <tbody>
           {a.hazards.map((h) => {
             const sg = a.safetyGoals.find((g) => g.id === h.sg);
@@ -392,6 +489,120 @@ export function HazardTable({ a }: { a: Pick<CaseData, "hazards" | "safetyGoals"
           })}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/* ---------- 시험 상세 패널 ---------- */
+export function DetailPanel({ data, s, id, onClose }: { data: CaseData; s: S; id: string | null; onClose: () => void }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const lastFocus = useRef<HTMLElement | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    lastFocus.current = document.activeElement as HTMLElement;
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "Tab" && panelRef.current) {
+        const f = panelRef.current.querySelectorAll<HTMLElement>("button, a[href], [tabindex]:not([tabindex='-1'])");
+        if (!f.length) return;
+        const first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+      lastFocus.current?.focus();
+    };
+  }, [id, onClose]);
+
+  const t = data.tests.find((x) => x.id === id);
+  if (!id || !t) return null;
+  const st = s.status[t.id];
+  const reqs = t.reqs.map((r) => data.requirements.find((x) => x.id === r)).filter(Boolean) as CaseData["requirements"];
+  const sgs = t.sgs.map((g) => data.safetyGoals.find((x) => x.id === g)).filter(Boolean) as CaseData["safetyGoals"];
+  const blocks = t.blocks.map((b) => data.blocks.find((x) => x.id === b)).filter(Boolean) as CaseData["blocks"];
+  const plans = data.plan.filter((p) => p.covers[t.id]);
+  const prem = (t.assumes ?? []).map((pid) => data.premises?.find((p) => p.id === pid)).filter(Boolean) as Premise[];
+  const stageLabel = (x: string) => STAGES.find((st) => st.id === x)?.label ?? "공통";
+
+  return (
+    <div className="drawer-back" onClick={onClose}>
+      <div ref={panelRef} className="drawer" role="dialog" aria-modal="true" aria-labelledby="detail-title" onClick={(e) => e.stopPropagation()}>
+        <div className="drawer-head">
+          <div>
+            <div className="small muted">{t.id} · {catLabel(t.cat)}</div>
+            <h2 id="detail-title" style={{ fontSize: 19, marginTop: 2 }}>{t.title}</h2>
+          </div>
+          <button ref={closeRef} className="icon-btn" onClick={onClose} aria-label="닫기">×</button>
+        </div>
+        <div className="drawer-badges">
+          <PriorityBadge p={s.prio[t.id]} />
+          <StatusPill st={st} />
+          <Importance a={testAsil(t, s.sgA)} />
+        </div>
+
+        <div className="drawer-sec">
+          <h3>시험 조건</h3><p>{t.condition}</p>
+          <h3>판정 기준</h3><p>{t.criteria}</p>
+          {t.why && <><h3>왜 필요한가</h3><p>{t.why}</p></>}
+        </div>
+
+        <div className="drawer-sec">
+          <h3>내 계획과의 연결</h3>
+          {plans.length ? (
+            <ul className="plain">{plans.map((p) => <li key={p.id}><StatusPill st={p.covers[t.id]} /> {p.text}</li>)}</ul>
+          ) : <p className="muted">내 계획에 대응하는 항목이 없습니다.</p>}
+        </div>
+
+        <div className="drawer-sec">
+          <h3>근거 요구사항</h3>
+          {reqs.length ? <ul className="plain">{reqs.map((r) => <li key={r.id}><span className="mono muted">{r.id}</span> {r.text}</li>)}</ul> : <p className="muted">연결된 요구사항 없음</p>}
+        </div>
+
+        {sgs.length > 0 && (
+          <div className="drawer-sec">
+            <h3>안전 목표</h3>
+            <ul className="plain">
+              {sgs.map((g) => (
+                <li key={g.id}>
+                  <span className="mono muted">{g.id}</span> {g.text} <Asil a={s.sgA[g.id]} />
+                  <div className="small muted">안전 상태: {g.safeState}</div>
+                  {data.hazards.filter((h) => h.sg === g.id).map((h) => (
+                    <div key={h.id} className="small muted">← {h.id} {h.text} (S{h.S} E{h.E} C{h.C})</div>
+                  ))}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {blocks.length > 0 && (
+          <div className="drawer-sec">
+            <h3>걸리는 시스템 블록</h3>
+            <div>{blocks.map((b) => <span key={b.id} className="chip static">{stageLabel(b.stage)} · {b.label}</span>)}</div>
+          </div>
+        )}
+
+        <div className="drawer-sec">
+          <h3>분석 전제</h3>
+          {prem.length ? (
+            <ul className="plain">
+              {prem.map((p) => (
+                <li key={p.id}><span className={`ptag ${p.kind}`}>{PREMISE_LABEL[p.kind]}</span> {p.q}<div className="small">{p.text}</div></li>
+              ))}
+            </ul>
+          ) : <p className="muted">이 시험이 기대는 보완 질문 전제는 없습니다.</p>}
+        </div>
+
+        <p className="small muted" style={{ marginTop: 16 }}>AI가 만든 제안입니다. 조건과 판정 기준의 수치는 실제 사양에 맞게 검토한 뒤 계획에 넣으세요.</p>
+      </div>
     </div>
   );
 }

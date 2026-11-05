@@ -1,10 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Shell, { StepHead, useStepState } from "@/components/Shell";
-import { BlockDiagram, CoverageMatrix, GapCompare, Overview, Priority, SafetyTrace, TestTable, TraceTable } from "@/components/sections";
-import { useFlow } from "@/lib/flow";
+import {
+  BlockDiagram, CoverageMatrix, DetailPanel, DetailProvider, GapCompare, GapList, Overview, PremiseSummary,
+  SafetyTrace, TestTable, TraceTable,
+} from "@/components/sections";
+import { TabPanel, Tabs } from "@/components/Tabs";
+import { flowPremises, useFlow } from "@/lib/flow";
 import { summary } from "@/lib/analysis";
 import { runChecks } from "@/lib/checks";
 import { DEMO_CASES } from "@/lib/demo";
@@ -14,28 +18,21 @@ export default function ResultPage() {
   return <Shell step={3}><ResultStep /></Shell>;
 }
 
-const TABS = [
-  { id: "summary", label: "요약" },
-  { id: "gaps", label: "보완 필요 항목" },
-  { id: "compare", label: "계획 비교" },
-  { id: "matrix", label: "커버리지 매트릭스" },
-  { id: "blocks", label: "블록도" },
-  { id: "safety", label: "기능안전 추적" },
-  { id: "trace", label: "추적표" },
-  { id: "tests", label: "전체 시험 항목" },
-] as const;
-type TabId = (typeof TABS)[number]["id"];
+type TabId = "gaps" | "compare" | "trace" | "blocks" | "tests";
+const TAB_IDS: TabId[] = ["gaps", "compare", "trace", "blocks", "tests"];
 
 function ResultStep() {
   const { flow } = useFlow();
   const { gapOk } = useStepState();
-  const [tab, setTab] = useState<TabId>("summary");
+  const [tab, setTab] = useState<TabId>("gaps");
+  const [detail, setDetail] = useState<string | null>(null);
+  const closeDetail = useCallback(() => setDetail(null), []);
 
   useEffect(() => {
     const h = window.location.hash.slice(1) as TabId;
-    if (TABS.some((t) => t.id === h)) setTab(h);
+    if (TAB_IDS.includes(h)) setTab(h);
   }, []);
-  const select = (id: TabId) => { setTab(id); history.replaceState(null, "", `#${id}`); };
+  const select = (id: string) => { setTab(id as TabId); history.replaceState(null, "", `#${id}`); };
 
   const data: CaseData | null = useMemo(() => {
     if (!flow.analysis || !flow.gap) return null;
@@ -45,8 +42,9 @@ function ResultStep() {
       id: flow.demoId ?? "my-system",
       tab: demo?.tab ?? flow.analysis.name,
       planNote: demo?.planNote,
+      premises: flowPremises(flow),
     };
-  }, [flow.analysis, flow.gap, flow.demoId]);
+  }, [flow]);
   const s = useMemo(() => (data ? summary(data) : null), [data]);
 
   if (!gapOk || !data || !s)
@@ -58,7 +56,6 @@ function ResultStep() {
     );
 
   const checks = flow.demoId ? runChecks(DEMO_CASES).filter((c) => c.label.startsWith(`${data.tab}:`)) : [];
-
   const downloadJson = () => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
@@ -68,54 +65,74 @@ function ResultStep() {
     URL.revokeObjectURL(a.href);
   };
 
+  const tabs = [
+    { id: "gaps", label: "보완 항목", badge: s.missing.length },
+    { id: "compare", label: "계획 비교" },
+    { id: "trace", label: "요구사항 추적" },
+    { id: "blocks", label: "시스템 블록도" },
+    { id: "tests", label: "전체 시험 목록", badge: s.total },
+  ];
+  const high = s.byPrio.high;
+
   return (
-    <>
-      <StepHead n={3} title="보완 항목 결과"
-        desc={<><b>{data.name}</b>의 시스템 분석과 내 시험 계획 {data.plan.length}개를 대조한 결과입니다. 탭을 눌러 원하는 관점으로 보세요.</>} />
+    <DetailProvider value={setDetail}>
+      <StepHead n={3} title="시험 계획 분석 결과"
+        desc={<><b>{data.name}</b> · 내 계획 {data.plan.length}개를 에이전트 제안 {s.total}개와 대조했습니다.</>} />
 
-      <div className="subtabs" role="tablist">
-        {TABS.map((t) => (
-          <button key={t.id} role="tab" className="subtab" aria-selected={tab === t.id} onClick={() => select(t.id)}>
-            {t.label}{t.id === "gaps" && <span className="cnt">{s.missing.length}</span>}
-          </button>
-        ))}
-      </div>
+      <section className="section" style={{ marginTop: 10 }}>
+        <Overview s={s} />
+        <p className="headline">
+          {s.missing.length === 0
+            ? "계획에서 빠진 시험이 없습니다."
+            : <>보완이 필요한 시험이 <b>{s.missing.length}개</b> 있고, 그중 <b className="gap-t">우선순위 높음 {high}개</b>부터 확인하세요.</>}
+        </p>
+        <PremiseSummary premises={data.premises ?? []} tests={data.tests} />
+      </section>
 
-      {tab === "summary" && (
-        <>
-          <section className="section"><Overview data={data} s={s} /></section>
-          <Priority data={data} s={s} limit={3} title="가장 먼저 보완할 3가지" desc="누락·부분 반영 항목 중 위험도(ASIL)가 가장 높은 순서입니다. 전체 목록은 '보완 필요 항목' 탭에 있습니다." />
-          <section className="section">
-            <div className="toolbar">
-              <button className="btn" onClick={() => select("gaps")}>보완 필요 항목 {s.missing.length}개 전체 보기 →</button>
-              <button className="btn" onClick={() => select("matrix")}>커버리지 매트릭스 보기 →</button>
-              <span style={{ flex: 1 }} />
-              <button className="btn" onClick={downloadJson}>결과 JSON 내려받기</button>
-            </div>
-          </section>
-          {checks.length > 0 && (
+      <Tabs tabs={tabs} value={tab} onChange={select} idPrefix="result" label="결과 보기 방식" />
+
+      <TabPanel idPrefix="result" id={tab}>
+        {tab === "gaps" && (
+          <>
+            <GapList data={data} s={s} />
             <section className="section">
-              <h2>검증 기준</h2>
-              <ul className="check-list card">
-                {checks.map((c) => (
-                  <li key={c.label}><span className={c.pass ? "ok" : "fail"}>{c.pass ? "통과" : "실패"}</span> {c.label} <span className="muted small">({c.detail})</span></li>
-                ))}
-              </ul>
+              <div className="toolbar">
+                <span className="small muted" style={{ flex: 1 }}>다른 관점: </span>
+                <button className="btn" onClick={() => select("compare")}>내 계획과 나란히 보기</button>
+                <button className="btn" onClick={() => select("trace")}>요구사항별로 보기</button>
+                <button className="btn" onClick={downloadJson}>결과 JSON 내려받기</button>
+              </div>
             </section>
-          )}
-        </>
-      )}
-      {tab === "gaps" && <Priority data={data} s={s} limit={0} title="보완 필요 항목" desc="내 계획에 없거나 일부만 다룬 시험 항목입니다. 위험도(ASIL) 순으로 정렬했습니다." />}
-      {tab === "compare" && <GapCompare data={data} s={s} />}
-      {tab === "matrix" && <CoverageMatrix data={data} status={s.status} />}
-      {tab === "blocks" && <BlockDiagram data={data} status={s.status} />}
-      {tab === "safety" && <SafetyTrace data={data} s={s} />}
-      {tab === "trace" && <TraceTable data={data} status={s.status} />}
-      {tab === "tests" && <TestTable data={data} s={s} />}
+            {checks.length > 0 && (
+              <section className="section">
+                <h2 style={{ fontSize: 16 }}>이 사례의 검증 기준</h2>
+                <ul className="check-list card">
+                  {checks.map((c) => (
+                    <li key={c.label}><span className={c.pass ? "ok" : "fail"}>{c.pass ? "통과" : "실패"}</span> {c.label} <span className="muted small">({c.detail})</span></li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </>
+        )}
+        {tab === "compare" && <GapCompare data={data} s={s} />}
+        {tab === "trace" && (
+          <>
+            <CoverageMatrix data={data} s={s} />
+            <TraceTable data={data} s={s} />
+            <SafetyTrace data={data} s={s} />
+          </>
+        )}
+        {tab === "blocks" && <BlockDiagram data={data} status={s.status} />}
+        {tab === "tests" && <TestTable data={data} s={s} />}
+      </TabPanel>
 
       <div className="actions">
         <Link className="btn" href="/plan">← 시험 계획 고치기</Link>
+        <Link className="btn" href="/system">← 분석 전제 고치기</Link>
       </div>
-    </>
+
+      <DetailPanel data={data} s={s} id={detail} onClose={closeDetail} />
+    </DetailProvider>
   );
 }

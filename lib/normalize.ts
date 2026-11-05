@@ -1,4 +1,4 @@
-import type { Analysis, Category, GapResult, Stage } from "./types";
+import type { Analysis, Category, GapResult, Premise, PremiseKind, Stage } from "./types";
 
 const CATS: Category[] = ["env", "func", "comm", "fault", "misuse"];
 const STAGES: Stage[] = ["sensor", "process", "actuator", "support"];
@@ -28,6 +28,7 @@ export function normalizeAnalysis(raw: any, systemInput: string): Analysis {
     id: str(h?.id, 20) || pad("HZ", i), text: str(h?.text, 300), situation: str(h?.situation, 120),
     S: int(h?.S, 0, 3), E: int(h?.E, 0, 4), C: int(h?.C, 0, 3), sg: str(h?.sg, 20),
   })).filter((h) => sgIds.has(h.sg));
+  const facts = arr(raw?.facts).slice(0, 10).map((f: any) => ({ q: str(f?.q, 200), a: str(f?.a, 400) })).filter((f) => f.q && f.a);
   const questions = arr(raw?.questions).slice(0, 6).map((q: any, i) => ({
     id: str(q?.id, 10) || `Q${i + 1}`, q: str(q?.q, 200), why: str(q?.why, 200), assumption: str(q?.assumption, 200),
   })).filter((q) => q.q);
@@ -35,11 +36,19 @@ export function normalizeAnalysis(raw: any, systemInput: string): Analysis {
     name: str(raw?.name, 60) || "내 시스템",
     summary: str(raw?.summary, 400),
     systemInput: systemInput.slice(0, 3000),
-    blocks, requirements, hazards, safetyGoals, questions,
+    blocks, requirements, hazards, safetyGoals, questions, facts,
   };
 }
 
-export function normalizeGap(raw: any, a: Analysis, planLines: string[]): GapResult {
+export function cleanPremises(v: unknown): Premise[] {
+  const kinds: PremiseKind[] = ["fact", "assume", "unknown"];
+  return arr(v).slice(0, 20).map((p: any) => ({
+    id: str(p?.id, 10), kind: (kinds.includes(p?.kind) ? p.kind : "assume") as PremiseKind, q: str(p?.q, 200), text: str(p?.text, 400),
+  })).filter((p) => p.id && p.q);
+}
+
+export function normalizeGap(raw: any, a: Analysis, planLines: string[], premises: Premise[] = []): GapResult {
+  const premIds = new Set(premises.filter((p) => p.kind !== "fact").map((p) => p.id));
   const reqIds = new Set(a.requirements.map((r) => r.id));
   const sgIds = new Set(a.safetyGoals.map((s) => s.id));
   const blockIds = new Set(a.blocks.map((b) => b.id));
@@ -54,6 +63,7 @@ export function normalizeGap(raw: any, a: Analysis, planLines: string[]): GapRes
     sgs: arr(t?.sgs).map((x) => str(x, 20)).filter((x) => sgIds.has(x)),
     blocks: arr(t?.blocks).map((x) => str(x, 30)).filter((x) => blockIds.has(x)),
     why: str(t?.why, 300) || undefined,
+    assumes: arr(t?.assumes).map((x) => str(x, 10)).filter((x) => premIds.has(x)),
   })).filter((t) => t.title && !seen.has(t.id) && seen.add(t.id));
   const testIds = new Set(tests.map((t) => t.id));
   const rawPlan = arr(raw?.plan);

@@ -1,6 +1,6 @@
 [
-  { "title": "야간 트랙 차선 유지 주행", "condition": "직선·곡선 구간 각 5회" },
-  { "title": "야간 정지 신호 인식 후 정지", "condition": "정지선 앞 정지 확인" },
-  { "title": "실내 조명 아래 장애물 앞 정지", "condition": "장애물 1m 전방" },
-  { "title": "E-stop 눌러서 정지 확인", "condition": "근거리" }
+  { "title": "야간 트랙 차선 유지 주행", "condition": "직선·곡선 구간 각 5회, 노면 조도 10 lux 이하", "criteria": "차선 중앙 ±10cm 유지" },
+  { "title": "야간 정지 신호 인식 후 정지", "condition": "정지 신호 3m 전방 등장", "criteria": "정지선 앞 0~20cm 정지" },
+  { "title": "실내 조명 아래 장애물 앞 정지", "condition": "장애물 1m 전방", "criteria": "접촉 없이 정지" },
+  { "title": "E-stop 눌러서 정지 확인", "condition": "근거리 10회", "criteria": "0.5초 이내 정지" }
 ]

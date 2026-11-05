@@ -58,28 +58,34 @@ function clean(t: Table): Table {
 
 const TITLE_RE = /항목|시험|테스트|title|name|test|item|case/i;
 const COND_RE = /조건|condition|내용|설명|desc|detail|방법|procedure/i;
+const CRIT_RE = /판정|기준|합격|criteria|pass|expected|acceptance/i;
 
 /** 제목 줄 여부와 항목·조건 열을 추측한다. */
 export function guessColumns(t: Table) {
   const head = t[0] ?? [];
-  const hasHeader = head.some((h) => TITLE_RE.test(h) || COND_RE.test(h));
-  let title = hasHeader ? head.findIndex((h) => TITLE_RE.test(h)) : -1;
+  const hasHeader = head.some((h) => TITLE_RE.test(h) || COND_RE.test(h) || CRIT_RE.test(h));
+  const crit = hasHeader ? head.findIndex((h) => CRIT_RE.test(h)) : -1;
+  let title = hasHeader ? head.findIndex((h, i) => i !== crit && TITLE_RE.test(h)) : -1;
   if (title < 0) {
     // 가장 긴 글이 많은 열
     const width = Math.max(...t.map((r) => r.length), 1);
     const avg = Array.from({ length: width }, (_, i) => t.reduce((s, r) => s + (r[i]?.length ?? 0), 0));
     title = avg.indexOf(Math.max(...avg));
   }
-  const cond = hasHeader ? head.findIndex((h, i) => i !== title && COND_RE.test(h)) : -1;
-  return { hasHeader, title, cond };
+  const cond = hasHeader ? head.findIndex((h, i) => i !== title && i !== crit && COND_RE.test(h)) : -1;
+  return { hasHeader, title, cond, crit: crit === title ? -1 : crit };
 }
 
-export function toLines(t: Table, hasHeader: boolean, title: number, cond: number): string[] {
+/** 한 줄 형식: 시험 항목 (조건) → 판정 기준 */
+export function toLines(t: Table, hasHeader: boolean, title: number, cond: number, crit = -1): string[] {
   return (hasHeader ? t.slice(1) : t)
     .map((r) => {
       const a = r[title] ?? "";
       const b = cond >= 0 ? r[cond] ?? "" : "";
-      return (a && b ? `${a} (${b})` : a || b).replace(/\s+/g, " ").trim();
+      const c = crit >= 0 ? r[crit] ?? "" : "";
+      let line = a && b ? `${a} (${b})` : a || b;
+      if (c) line = line ? `${line} → ${c}` : c;
+      return line.replace(/\s+/g, " ").trim();
     })
     .filter(Boolean)
     .slice(0, 60);

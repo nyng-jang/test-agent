@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   if (systemInput.length > 3000) return NextResponse.json({ error: "시스템 설명은 3000자 이하로 입력해 주세요." }, { status: 400 });
   const answers = (Array.isArray(body?.answers) ? body.answers : [])
     .filter((x: any) => typeof x?.q === "string" && typeof x?.a === "string" && x.a.trim())
-    .slice(0, 8)
+    .slice(0, 10)
     .map((x: any) => ({ q: x.q.slice(0, 200), a: x.a.trim().slice(0, 400) }));
 
   const g = guardAi(req);

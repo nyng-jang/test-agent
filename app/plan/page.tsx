@@ -4,8 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Shell, { StepHead, useStepState } from "@/components/Shell";
-import { gapKeyOf, useFlow } from "@/lib/flow";
+import { flowPremises, gapKeyOf, useFlow } from "@/lib/flow";
 import { guessColumns, readPlanFile, toLines, type Table } from "@/lib/planImport";
+import { AiProgress } from "@/components/AiProgress";
+import { TabPanel, Tabs } from "@/components/Tabs";
+
+/** 조건이나 기준 없이 이름만 있는 줄: 괄호·숫자·화살표가 없는 짧은 줄 */
+const bare = (l: string) => !/[(\[:→]|->|\d/.test(l);
 
 export default function PlanPage() {
   return <Shell step={2}><PlanStep /></Shell>;
@@ -30,21 +35,24 @@ function PlanStep() {
     );
 
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  const premises = flowPremises(flow);
+  const key = gapKeyOf(flow.analysis, lines, premises);
+  const bareCount = lines.filter(bare).length;
   const setLines = (ls: string[]) => { setText(ls.join("\n")); update({ planLines: ls }); };
 
   const detect = async () => {
     update({ planLines: lines });
-    if (flow.gap && flow.gapKey === gapKeyOf(flow.analysis, lines)) { router.push("/result"); return; }
+    if (flow.gap && flow.gapKey === key) { router.push("/result"); return; }
     setBusy(true); setErr("");
     try {
       const r = await fetch("/api/gap", {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ analysis: flow.analysis, plan: lines }),
+        body: JSON.stringify({ analysis: flow.analysis, plan: lines, premises }),
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "누락 탐지에 실패했습니다.");
       if (typeof j.remaining === "number") setRemaining(j.remaining);
-      update({ gap: j.gap, gapKey: gapKeyOf(flow.analysis, lines), planLines: lines });
+      update({ gap: j.gap, gapKey: key, planLines: lines });
       router.push("/result");
     } catch (e: any) {
       setErr(e.message);
@@ -53,34 +61,57 @@ function PlanStep() {
     }
   };
 
-  const unchanged = !!flow.gap && flow.gapKey === gapKeyOf(flow.analysis, lines);
+  const unchanged = !!flow.gap && flow.gapKey === key;
 
   return (
     <>
       <StepHead n={2} title="내 시험 계획"
         desc={<>지금까지 짠 시험 계획을 넣어 주세요. AI가 1단계 분석과 대조해 빠진 조건을 찾습니다. 시스템: <b>{flow.analysis?.name}</b></>} />
 
-      <div className="subtabs" role="tablist" style={{ marginTop: 10 }}>
-        <button role="tab" className="subtab" aria-selected={tab === "text"} onClick={() => setTab("text")}>한 줄씩 입력</button>
-        <button role="tab" className="subtab" aria-selected={tab === "file"} onClick={() => setTab("file")}>파일 불러오기 (CSV · JSON · Excel)</button>
+      <details className="card guide" open={live && lines.length === 0} style={{ marginTop: 12 }}>
+        <summary>작성 예시: 시험 항목 · 조건 · 판정 기준을 나눠 쓰면 비교가 정확해집니다</summary>
+        <div className="tbl-wrap" style={{ marginTop: 10 }}>
+          <table className="tbl" style={{ minWidth: 0 }}>
+            <thead><tr><th scope="col">시험 항목</th><th scope="col">시험 조건</th><th scope="col">판정 기준</th></tr></thead>
+            <tbody>
+              <tr><td>저온 시동 시험</td><td>-30℃에서 2시간 방치 후 작동</td><td>1초 이내 정상 작동</td></tr>
+              <tr><td>E-stop 정지 시간</td><td>최고 속도 주행 중 20회</td><td>0.5초 이내 정지, 20회 중 20회</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="small" style={{ margin: "10px 0 0" }}>
+          한 줄로 쓸 때: <code>시험 항목 (조건) → 판정 기준</code> <span className="muted">예: 저온 시동 시험 (-30℃ 2시간 방치) → 1초 이내 작동</span><br />
+          <span className="muted">이름만 써도 되지만, 조건이 없으면 AI가 &lsquo;부분 반영&rsquo;으로 판단할 수 있습니다.</span>
+        </p>
+      </details>
+
+      <div style={{ marginTop: 14 }}>
+        <Tabs idPrefix="plan" label="계획 입력 방식" value={tab} onChange={(v) => setTab(v as "text" | "file")}
+          tabs={[{ id: "text", label: "한 줄씩 입력" }, { id: "file", label: "파일 불러오기 (CSV · JSON · Excel)" }]} />
       </div>
 
-      <section className="section">
-        {tab === "text" ? (
-          <div className="card">
-            <label className="f" htmlFor="plan" style={{ marginTop: 0 }}>시험 항목 (한 줄에 하나)</label>
-            <textarea id="plan" value={text} readOnly={!live} style={{ minHeight: 220 }}
-              onChange={(e) => setText(e.target.value)}
-              onBlur={() => update({ planLines: lines })}
-              placeholder={"야간 트랙 차선 유지 주행\n정지 신호 인식 후 정지\nE-stop 눌러서 정지 확인"} />
-            <div className="small muted" style={{ marginTop: 4 }}>{lines.length}개 항목 · 조건을 괄호로 함께 적으면 더 정확합니다. 예: 차선 유지 주행 (야간, 직선·곡선 5회)</div>
-          </div>
-        ) : (
-          <FileImport disabled={!live} onApply={(ls, replace) => { setLines(replace ? ls : [...lines, ...ls]); setTab("text"); }} />
-        )}
-        {!live && <div className="notice" style={{ marginTop: 10 }}>데모에서는 예시 계획으로 진행합니다. 내 계획을 넣으려면 로그인하세요.</div>}
-      </section>
+      <TabPanel idPrefix="plan" id={tab}>
+        <section className="section">
+          {tab === "text" ? (
+            <div className="card">
+              <label className="f" htmlFor="plan" style={{ marginTop: 0 }}>시험 항목 (한 줄에 하나)</label>
+              <textarea id="plan" value={text} readOnly={!live} style={{ minHeight: 220 }}
+                onChange={(e) => setText(e.target.value)}
+                onBlur={() => update({ planLines: lines })}
+                placeholder={"저온 시동 시험 (-30℃ 2시간 방치) → 1초 이내 작동\n차선 유지 주행 (야간, 직선·곡선 각 5회) → 중앙 ±10cm\nE-stop 정지 확인 (근거리)"} />
+              <div className="small muted" style={{ marginTop: 4 }}>
+                {lines.length}개 항목
+                {bareCount > 0 && <> · <span className="warn-t">조건·기준 없이 이름만 있는 항목 {bareCount}개</span></>}
+              </div>
+            </div>
+          ) : (
+            <FileImport disabled={!live} onApply={(ls, replace) => { setLines(replace ? ls : [...lines, ...ls]); setTab("text"); }} />
+          )}
+          {!live && <div className="notice" style={{ marginTop: 10 }}>데모에서는 예시 계획으로 진행합니다. 내 계획을 넣으려면 로그인하세요.</div>}
+        </section>
+      </TabPanel>
 
+      {busy && <AiProgress typical={70} steps={["분석 결과와 계획 읽는 중", "카테고리별 시험 항목 만드는 중", "조건·판정 기준 정리 중", "내 계획과 하나씩 대조 중", "우선순위 정리 중"]} />}
       {err && <div className="notice err">{err}</div>}
       <div className="actions">
         <Link className="btn" href="/system">← 시스템 입력</Link>
@@ -88,8 +119,8 @@ function PlanStep() {
         {gapOk && unchanged ? (
           <button className="btn primary lg" onClick={() => router.push("/result")}>결과 보기 →</button>
         ) : (
-          <button className="btn primary lg" disabled={busy || !live} onClick={detect}>
-            {busy ? <span className="loading">누락 탐지 중… (1~2분)</span> : "AI로 누락 탐지 →"}
+          <button className="btn primary lg" disabled={busy || !live || lines.length === 0} onClick={detect}>
+            {busy ? "누락 탐지 중…" : "AI로 누락 탐지 →"}
           </button>
         )}
       </div>
@@ -104,6 +135,7 @@ function FileImport({ disabled, onApply }: { disabled: boolean; onApply: (lines:
   const [hasHeader, setHasHeader] = useState(true);
   const [title, setTitle] = useState(0);
   const [cond, setCond] = useState(-1);
+  const [crit, setCrit] = useState(-1);
   const [over, setOver] = useState(false);
 
   const load = async (f: File | undefined) => {
@@ -113,7 +145,7 @@ function FileImport({ disabled, onApply }: { disabled: boolean; onApply: (lines:
       const t = await readPlanFile(f);
       if (!t.length) throw new Error("파일에서 내용을 찾지 못했습니다.");
       const g = guessColumns(t);
-      setTable(t); setHasHeader(g.hasHeader); setTitle(g.title); setCond(g.cond);
+      setTable(t); setHasHeader(g.hasHeader); setTitle(g.title); setCond(g.cond); setCrit(g.crit);
     } catch (e: any) {
       setTable(null); setErr(e.message || "파일을 읽지 못했습니다.");
     }
@@ -121,7 +153,7 @@ function FileImport({ disabled, onApply }: { disabled: boolean; onApply: (lines:
 
   const width = table ? Math.max(...table.map((r) => r.length)) : 0;
   const colName = (i: number) => (hasHeader && table?.[0][i]) || `${i + 1}열`;
-  const preview = table ? toLines(table, hasHeader, title, cond) : [];
+  const preview = table ? toLines(table, hasHeader, title, cond, crit) : [];
 
   return (
     <div className="card">
@@ -136,7 +168,7 @@ function FileImport({ disabled, onApply }: { disabled: boolean; onApply: (lines:
         <input type="file" accept=".csv,.tsv,.json,.xlsx,.txt" disabled={disabled} onChange={(e) => load(e.target.files?.[0])} />
         <div className="small" style={{ marginTop: 10 }}>
           예시 파일: <a href="/samples/plan-sample.csv" download>CSV</a> · <a href="/samples/plan-sample.json" download>JSON</a>
-          <span className="muted"> (CSV는 Excel에서 열어 고친 뒤 .xlsx로 저장해도 됩니다)</span>
+          <span className="muted"> (시험 항목 · 시험 조건 · 판정 기준 세 열. Excel에서 열어 고친 뒤 .xlsx로 저장해도 됩니다)</span>
         </div>
       </div>
       {err && <div className="notice err" style={{ marginTop: 10 }}>{err}</div>}
@@ -154,6 +186,12 @@ function FileImport({ disabled, onApply }: { disabled: boolean; onApply: (lines:
               <select value={cond} onChange={(e) => setCond(Number(e.target.value))}>
                 <option value={-1}>없음</option>
                 {Array.from({ length: width }, (_, i) => i !== title && <option key={i} value={i}>{colName(i)}</option>)}
+              </select>
+            </label>
+            <label className="small">판정 기준 열 (선택){" "}
+              <select value={crit} onChange={(e) => setCrit(Number(e.target.value))}>
+                <option value={-1}>없음</option>
+                {Array.from({ length: width }, (_, i) => i !== title && i !== cond && <option key={i} value={i}>{colName(i)}</option>)}
               </select>
             </label>
           </div>

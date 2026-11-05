@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import type { Analysis, GapResult } from "./types";
+import type { Analysis, GapResult, Premise } from "./types";
+import { premisesOf, type QState } from "./premise";
 import { demoAnalysis, demoById, demoGap, demoPlanLines } from "./demo";
 
 export type Mode = "live" | "guest" | null;
@@ -10,6 +11,7 @@ export interface FlowState {
   demoId: string | null;          // 불러온 예시 사례 (직접 입력이면 null)
   systemInput: string;
   answers: Record<string, string>; // 보완 질문 id → 답
+  qState: Record<string, QState>;  // 보완 질문 id → 직접 답변 / AI 가정 사용 / 확인 필요
   analysis: Analysis | null;
   analyzedInput: string | null;    // 분석 당시 시스템 설명 (바뀌면 다시 분석 필요)
   planLines: string[];
@@ -18,11 +20,16 @@ export interface FlowState {
 }
 
 const EMPTY: FlowState = {
-  demoId: null, systemInput: "", answers: {}, analysis: null, analyzedInput: null, planLines: [], gap: null, gapKey: null,
+  demoId: null, systemInput: "", answers: {}, qState: {}, analysis: null, analyzedInput: null, planLines: [], gap: null, gapKey: null,
 };
 
-export const gapKeyOf = (a: Analysis | null, plan: string[]) =>
-  JSON.stringify({ r: a?.requirements, s: a?.safetyGoals, b: a?.blocks?.map((x) => x.id), p: plan.map((x) => x.trim()).filter(Boolean) });
+export const flowPremises = (f: FlowState): Premise[] => premisesOf(f.analysis, f.answers, f.qState);
+
+export const gapKeyOf = (a: Analysis | null, plan: string[], premises: Premise[]) =>
+  JSON.stringify({
+    r: a?.requirements, s: a?.safetyGoals, b: a?.blocks?.map((x) => x.id),
+    p: plan.map((x) => x.trim()).filter(Boolean), q: premises.map((x) => [x.id, x.kind, x.text]),
+  });
 
 interface Session { liveEnabled: boolean; loggedIn: boolean; remaining: number }
 
@@ -85,8 +92,8 @@ export function FlowProvider({ children }: { children: React.ReactNode }) {
     const analysis = demoAnalysis(c);
     const planLines = demoPlanLines(c);
     setFlow({
-      demoId: id, systemInput: c.systemInput, answers: {}, analysis, analyzedInput: c.systemInput,
-      planLines, gap: demoGap(c), gapKey: gapKeyOf(analysis, planLines),
+      demoId: id, systemInput: c.systemInput, answers: {}, qState: {}, analysis, analyzedInput: c.systemInput,
+      planLines, gap: demoGap(c), gapKey: gapKeyOf(analysis, planLines, premisesOf(analysis, {}, {})),
     });
   }, []);
 

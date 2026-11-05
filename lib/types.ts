@@ -10,15 +10,25 @@ export interface SafetyGoal { id: string; text: string; safeState: string }
 export interface TestItem {
   id: string; cat: Category; title: string; condition: string; criteria: string;
   reqs: string[]; sgs: string[]; blocks: string[]; why?: string;
+  /** 이 시험이 기대는 분석 전제(보완 질문 id). 가정이 바뀌면 다시 봐야 하는 시험 */
+  assumes?: string[];
 }
 export interface PlanItem { id: string; text: string; covers: Record<string, CoverLevel> }
 export interface Question { id: string; q: string; why: string; assumption: string }
+export interface Fact { q: string; a: string }
+
+/** 분석 전제: 사용자가 확인한 정보 / AI 가정 / 확인 필요 */
+export type PremiseKind = "fact" | "assume" | "unknown";
+export interface Premise { id: string; kind: PremiseKind; q: string; text: string }
+export const PREMISE_LABEL: Record<PremiseKind, string> = { fact: "사용자 확인", assume: "AI 가정", unknown: "확인 필요" };
 
 /** 1단계 결과: 시스템 분석 */
 export interface Analysis {
   name: string; summary: string; systemInput: string;
   blocks: Block[]; requirements: Requirement[]; hazards: Hazard[]; safetyGoals: SafetyGoal[];
   questions: Question[];
+  /** 이전 재분석에 반영된 사용자 답변 */
+  facts?: Fact[];
 }
 /** 3단계 결과: 시험 항목 + 내 계획 대조 */
 export interface GapResult { tests: TestItem[]; plan: PlanItem[] }
@@ -27,6 +37,8 @@ export interface CaseData {
   id: string; name: string; tab: string; summary: string; systemInput: string; planNote?: string;
   blocks: Block[]; requirements: Requirement[]; hazards: Hazard[]; safetyGoals: SafetyGoal[];
   questions?: Question[];
+  facts?: Fact[];
+  premises?: Premise[];
   tests: TestItem[]; plan: PlanItem[];
   live?: boolean;
 }
