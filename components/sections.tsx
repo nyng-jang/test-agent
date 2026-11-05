@@ -146,7 +146,7 @@ export function GapList({ data, s }: { data: CaseData; s: S }) {
                   <dl className="kv">
                     <dt>시험 조건</dt><dd>{t.condition}</dd>
                     <dt>판정 기준</dt><dd>{t.criteria}</dd>
-                    {t.reqs.length > 0 && <><dt>관련 요구사항</dt><dd>{t.reqs.map((r) => <div key={r}><span className="mono muted">{r}</span> {reqText(r)}</div>)}</dd>}
+                    {t.reqs.length > 0 && <><dt>관련 요구사항</dt><dd>{t.reqs.map((r) => <div key={r}><span className="mono muted">{r}</span> {reqText(r)}</div>)}</dd></>}
                     {t.sgs.length > 0 && <><dt>안전 목표</dt><dd>{t.sgs.join(" · ")}</dd></>}
                   </dl>
                   {t.why && <p className="why">보완이 필요한 이유: {t.why}</p>}
