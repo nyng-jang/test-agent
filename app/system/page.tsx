@@ -75,7 +75,7 @@ function SystemStep() {
           ))}
           {live && <button className="btn" aria-pressed={!flow.demoId && !flow.systemInput} onClick={reset}>새로 입력</button>}
         </div>
-        <div className="card">
+        <div className="card system-input-card">
           <label className="f" htmlFor="sys" style={{ marginTop: 0 }}>시스템 설명</label>
           <textarea id="sys" value={flow.systemInput} readOnly={!live} maxLength={3000} style={{ minHeight: 150 }}
             onChange={(e) => update({ systemInput: e.target.value })}
@@ -113,8 +113,7 @@ function SystemStep() {
 
       {a && !stale && (
         <>
-          <section className="section">
-            <h2>{a.name}</h2>
+          <section className="section analysis-overview">\n            <h2>{a.name}</h2>
             <p className="desc">{a.summary}</p>
           </section>
 
