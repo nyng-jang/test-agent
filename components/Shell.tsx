@@ -1,0 +1,76 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { gapKeyOf, useFlow } from "@/lib/flow";
+
+export function useStepState() {
+  const { flow } = useFlow();
+  const analysisOk = !!flow.analysis && flow.analyzedInput === flow.systemInput;
+  const gapOk = analysisOk && !!flow.gap && flow.gapKey === gapKeyOf(flow.analysis, flow.planLines);
+  return { analysisOk, gapOk };
+}
+
+export default function Shell({ step, children }: { step: 1 | 2 | 3; children: React.ReactNode }) {
+  const { ready, mode, session, logout } = useFlow();
+  const { analysisOk, gapOk } = useStepState();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (ready && !mode) router.replace("/");
+  }, [ready, mode, router]);
+
+  if (!ready || !mode) return <div className="wrap" style={{ padding: 40 }}><span className="muted">불러오는 중…</span></div>;
+
+  const steps = [
+    { n: 1, label: "시스템 입력", href: "/system", on: true },
+    { n: 2, label: "내 시험 계획", href: "/plan", on: analysisOk },
+    { n: 3, label: "보완 항목 결과", href: "/result", on: gapOk },
+  ];
+
+  return (
+    <>
+      <header className="topbar">
+        <div className="wrap topbar-in">
+          <Link href="/" className="brand">시험항목 누락 탐지</Link>
+          <nav className="steps" aria-label="단계">
+            {steps.map((s) =>
+              s.on ? (
+                <Link key={s.n} href={s.href} className={`step ${step === s.n ? "cur" : ""}`} aria-current={step === s.n ? "step" : undefined}>
+                  <span className="num">{s.n}</span><span className="lbl">{s.label}</span>
+                </Link>
+              ) : (
+                <span key={s.n} className="step off"><span className="num">{s.n}</span><span className="lbl">{s.label}</span></span>
+              ),
+            )}
+          </nav>
+          <div className="who">
+            {mode === "live" ? (
+              <span className="small muted">AI 호출 남은 횟수 {session?.remaining ?? 0}</span>
+            ) : (
+              <span className="pill none">데모 둘러보기</span>
+            )}
+            <button className="btn" onClick={async () => { await logout(); router.replace("/"); }}>
+              {mode === "live" ? "로그아웃" : "나가기"}
+            </button>
+          </div>
+        </div>
+      </header>
+      <main className="wrap">{children}</main>
+      <footer className="wrap">
+        카테고리는 일반적인 시험 분류(환경 / 기능 / 통신 / 고장·Fail-safe / 오작동)로 구성했고 규격 원문은 인용하지 않았습니다. 기능안전 부분은 ISO 26262의 HARA·ASIL 개념을 자작 시스템에 적용해 본 것이며 규격 준수를 뜻하지 않습니다. 시험 수치는 예시 값입니다.
+      </footer>
+    </>
+  );
+}
+
+export function StepHead({ n, title, desc }: { n: number; title: string; desc: React.ReactNode }) {
+  return (
+    <div className="step-head">
+      <div className="small muted">{n}단계</div>
+      <h1>{title}</h1>
+      <p className="muted">{desc}</p>
+    </div>
+  );
+}

@@ -12,10 +12,21 @@ export interface TestItem {
   reqs: string[]; sgs: string[]; blocks: string[]; why?: string;
 }
 export interface PlanItem { id: string; text: string; covers: Record<string, CoverLevel> }
+export interface Question { id: string; q: string; why: string; assumption: string }
+
+/** 1단계 결과: 시스템 분석 */
+export interface Analysis {
+  name: string; summary: string; systemInput: string;
+  blocks: Block[]; requirements: Requirement[]; hazards: Hazard[]; safetyGoals: SafetyGoal[];
+  questions: Question[];
+}
+/** 3단계 결과: 시험 항목 + 내 계획 대조 */
+export interface GapResult { tests: TestItem[]; plan: PlanItem[] }
 
 export interface CaseData {
   id: string; name: string; tab: string; summary: string; systemInput: string; planNote?: string;
   blocks: Block[]; requirements: Requirement[]; hazards: Hazard[]; safetyGoals: SafetyGoal[];
+  questions?: Question[];
   tests: TestItem[]; plan: PlanItem[];
   live?: boolean;
 }

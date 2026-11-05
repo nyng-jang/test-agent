@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { CaseData, Category, TestItem } from "@/lib/types";
 import { CATEGORIES, STAGES } from "@/lib/types";
 import { asilRank, hazardAsil, matrix, summary, testAsil, traceCsv, type TestStatus } from "@/lib/analysis";
@@ -8,50 +8,25 @@ import { asilRank, hazardAsil, matrix, summary, testAsil, traceCsv, type TestSta
 const ST_LABEL: Record<TestStatus, string> = { full: "계획에 있음", partial: "부분 반영", missing: "누락" };
 const catLabel = (c: Category) => CATEGORIES.find((x) => x.id === c)!.label;
 
-function Asil({ a }: { a: string }) {
+export function Asil({ a }: { a: string }) {
   return <span className={`badge asil-${a}`}>{a === "QM" ? "QM" : `ASIL ${a}`}</span>;
 }
 
-export default function CaseView({ data }: { data: CaseData }) {
-  const s = useMemo(() => summary(data), [data]);
+export function Overview({ data, s }: { data: CaseData; s: S }) {
   const coveragePct = Math.round(((s.full + s.partial * 0.5) / Math.max(1, s.total)) * 100);
-
   return (
-    <div>
-      <section className="section">
-        <div className="grid2">
-          <div className="card">
-            <div className="small muted">입력한 시스템 설명</div>
-            <p style={{ margin: "6px 0 0" }}>{data.systemInput}</p>
-          </div>
-          <div>
-            <div className="stats">
-              <div className="stat"><div className="v">{s.total}</div><div className="l">에이전트 제안 시험</div></div>
-              <div className="stat ok"><div className="v">{s.full}</div><div className="l">내 계획에 있음</div></div>
-              <div className="stat warn"><div className="v">{s.partial}</div><div className="l">부분 반영</div></div>
-              <div className="stat gap"><div className="v">{s.missingCount}</div><div className="l">누락</div></div>
-            </div>
-            <p className="small muted" style={{ marginTop: 10 }}>
-              커버리지 {coveragePct}% (부분 반영은 절반으로 계산). 누락 항목은 연결된 안전 목표의 ASIL이 높은 순서로 정렬합니다.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <GapCompare data={data} s={s} />
-      <Priority data={data} s={s} />
-      <CoverageMatrix data={data} status={s.status} />
-      <BlockDiagram data={data} status={s.status} />
-      <SafetyTrace data={data} s={s} />
-      <TestTable data={data} s={s} />
-      <TraceTable data={data} status={s.status} />
+    <div className="stats">
+      <div className="stat"><div className="v">{s.total}</div><div className="l">에이전트 제안 시험</div></div>
+      <div className="stat ok"><div className="v">{s.full}</div><div className="l">내 계획에 있음</div></div>
+      <div className="stat warn"><div className="v">{s.partial}</div><div className="l">부분 반영</div></div>
+      <div className="stat gap"><div className="v">{s.missingCount}</div><div className="l">누락 · 커버리지 {coveragePct}%</div></div>
     </div>
   );
 }
 
-type S = ReturnType<typeof summary>;
+export type S = ReturnType<typeof summary>;
 
-function GapCompare({ data, s }: { data: CaseData; s: S }) {
+export function GapCompare({ data, s }: { data: CaseData; s: S }) {
   const [onlyGap, setOnlyGap] = useState(false);
   const title = (id: string) => data.tests.find((t) => t.id === id)?.title ?? id;
   return (
@@ -112,13 +87,24 @@ function GapCompare({ data, s }: { data: CaseData; s: S }) {
   );
 }
 
-function Priority({ data, s }: { data: CaseData; s: S }) {
-  const top = s.missing.slice(0, 5);
-  if (!top.length) return null;
+export function Priority({ data, s, limit = 5, title, desc }: { data: CaseData; s: S; limit?: number; title?: string; desc?: string }) {
+  const [cat, setCat] = useState<Category | "all">("all");
+  const list = s.missing.filter((t) => cat === "all" || t.cat === cat);
+  const top = limit ? list.slice(0, limit) : list;
+  if (!s.missing.length) return <section className="section"><div className="notice">계획에서 빠진 항목이 없습니다.</div></section>;
   return (
     <section className="section">
-      <h2>먼저 보완할 시험 항목</h2>
-      <p className="desc">누락·부분 반영 항목 중 위험도(ASIL)가 높은 순서로 5개입니다.</p>
+      <h2>{title ?? "먼저 보완할 시험 항목"}</h2>
+      <p className="desc">{desc ?? `누락·부분 반영 항목 중 위험도(ASIL)가 높은 순서로 ${limit}개입니다.`}</p>
+      {!limit && (
+        <div className="toolbar">
+          <button className="btn" aria-pressed={cat === "all"} onClick={() => setCat("all")}>전체 {s.missing.length}</button>
+          {CATEGORIES.map((c) => {
+            const n = s.missing.filter((t) => t.cat === c.id).length;
+            return n ? <button key={c.id} className="btn" aria-pressed={cat === c.id} onClick={() => setCat(c.id)}>{c.label} {n}</button> : null;
+          })}
+        </div>
+      )}
       <div className="card">
         <ol className="priority">
           {top.map((t) => (
@@ -131,6 +117,7 @@ function Priority({ data, s }: { data: CaseData; s: S }) {
                 <div><b>{t.title}</b> <span className="small muted">{t.id} · {catLabel(t.cat)}</span></div>
                 <div className="small"><b>조건</b> {t.condition}</div>
                 <div className="small"><b>판정</b> {t.criteria}</div>
+                <div className="small mono muted">근거 {[...t.reqs, ...t.sgs].join(" ")}</div>
                 {t.why && <div className="why">왜 필요한가: {t.why}</div>}
               </div>
             </li>
@@ -141,7 +128,7 @@ function Priority({ data, s }: { data: CaseData; s: S }) {
   );
 }
 
-function CoverageMatrix({ data, status }: { data: CaseData; status: Record<string, TestStatus> }) {
+export function CoverageMatrix({ data, status }: { data: CaseData; status: Record<string, TestStatus> }) {
   const rows = matrix(data, status);
   const label = { covered: "반영", partial: "부분", gap: "누락", none: "–" } as const;
   return (
@@ -184,10 +171,11 @@ function CoverageMatrix({ data, status }: { data: CaseData; status: Record<strin
   );
 }
 
-function BlockDiagram({ data, status }: { data: CaseData; status: Record<string, TestStatus> }) {
+export function BlockDiagram({ data, status, plain }: { data: Pick<CaseData, "blocks" | "tests">; status?: Record<string, TestStatus>; plain?: boolean }) {
   const [sel, setSel] = useState<string | null>(null);
   const testsFor = (bid: string) => data.tests.filter((t) => t.blocks.includes(bid));
   const renderBlock = (b: CaseData["blocks"][number]) => {
+    if (plain || !status) return <div key={b.id} className="block" style={{ cursor: "default" }}><div style={{ fontWeight: 600, fontSize: 14 }}>{b.label}</div></div>;
     const ts = testsFor(b.id);
     const g = ts.filter((t) => status[t.id] !== "full").length;
     return (
@@ -197,12 +185,12 @@ function BlockDiagram({ data, status }: { data: CaseData; status: Record<string,
       </button>
     );
   };
-  const selBlock = data.blocks.find((b) => b.id === sel);
+  const selBlock = status ? data.blocks.find((b) => b.id === sel) : undefined;
   const support = data.blocks.filter((b) => b.stage === "support");
   return (
     <section className="section">
-      <h2>시스템 블록도</h2>
-      <p className="desc">센서 → 처리 → 액추에이터 흐름에서 각 시험이 어디에 걸리는지 보여줍니다. 블록을 누르면 해당 시험 목록이 나옵니다. 왼쪽 빨간 띠는 보완이 필요한 블록입니다.</p>
+      {!plain && <><h2>시스템 블록도</h2>
+      <p className="desc">센서 → 처리 → 액추에이터 흐름에서 각 시험이 어디에 걸리는지 보여줍니다. 블록을 누르면 해당 시험 목록이 나옵니다. 왼쪽 빨간 띠는 보완이 필요한 블록입니다.</p></>}
       <div className="card">
         <div className="flow">
           {STAGES.map((st, i) => (
@@ -221,10 +209,10 @@ function BlockDiagram({ data, status }: { data: CaseData; status: Record<string,
           <div style={{ marginTop: 12 }}>
             <div className="small muted" style={{ marginBottom: 6 }}>{selBlock.label}에 걸린 시험</div>
             {testsFor(selBlock.id).map((t) => (
-              <div key={t.id} className={`agent-item ${status[t.id]}`}>
+              <div key={t.id} className={`agent-item ${status![t.id]}`}>
                 <span className="id">{t.id}</span>
                 <span className="grow">{t.title}</span>
-                <span className={`pill ${status[t.id]}`}>{ST_LABEL[status[t.id]]}</span>
+                <span className={`pill ${status![t.id]}`}>{ST_LABEL[status![t.id]]}</span>
               </div>
             ))}
           </div>
@@ -246,7 +234,7 @@ function FlowCol({ title, last, children }: { title: string; last: boolean; chil
   );
 }
 
-function SafetyTrace({ data, s }: { data: CaseData; s: S }) {
+export function SafetyTrace({ data, s }: { data: CaseData; s: S }) {
   return (
     <section className="section">
       <h2>기능안전 추적: 위험 → 안전 목표 → 시험 항목</h2>
@@ -298,7 +286,7 @@ function SafetyTrace({ data, s }: { data: CaseData; s: S }) {
   );
 }
 
-function TestTable({ data, s }: { data: CaseData; s: S }) {
+export function TestTable({ data, s }: { data: CaseData; s: S }) {
   const [cat, setCat] = useState<Category | "all">("all");
   const list: TestItem[] = data.tests.filter((t) => cat === "all" || t.cat === cat);
   return (
@@ -339,7 +327,7 @@ function TestTable({ data, s }: { data: CaseData; s: S }) {
   );
 }
 
-function TraceTable({ data, status }: { data: CaseData; status: Record<string, TestStatus> }) {
+export function TraceTable({ data, status }: { data: CaseData; status: Record<string, TestStatus> }) {
   const download = () => {
     const blob = new Blob([traceCsv(data)], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -381,5 +369,29 @@ function TraceTable({ data, status }: { data: CaseData; status: Record<string, T
         </table>
       </div>
     </section>
+  );
+}
+
+export function HazardTable({ a }: { a: Pick<CaseData, "hazards" | "safetyGoals"> }) {
+  return (
+    <div className="tbl-wrap">
+      <table className="tbl">
+        <thead><tr><th>위험</th><th>상황</th><th>S·E·C</th><th>ASIL</th><th>안전 목표</th></tr></thead>
+        <tbody>
+          {a.hazards.map((h) => {
+            const sg = a.safetyGoals.find((g) => g.id === h.sg);
+            return (
+              <tr key={h.id}>
+                <td><span className="mono muted">{h.id}</span> {h.text}</td>
+                <td>{h.situation}</td>
+                <td className="mono">S{h.S} E{h.E} C{h.C}</td>
+                <td><Asil a={hazardAsil(h)} /></td>
+                <td><span className="mono muted">{sg?.id}</span> {sg?.text}<div className="small muted">안전 상태: {sg?.safeState}</div></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }

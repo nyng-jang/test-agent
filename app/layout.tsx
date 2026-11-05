@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { FlowProvider } from "@/lib/flow";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
-      <body>{children}</body>
+      <body>
+        <FlowProvider>{children}</FlowProvider>
+      </body>
     </html>
   );
 }

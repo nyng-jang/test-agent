@@ -6,63 +6,540 @@
   "systemInput": "디지털 사이드미러(카메라 모니터 시스템). 좌·우 도어에 외부 카메라가 있고, 영상은 SerDes 링크로 영상처리 ECU에 들어가 HDR·왜곡 보정 후 실내 좌·우 디스플레이에 표시된다. 지연(glass-to-glass)은 100ms 이하가 목표다. CAN으로 방향지시등·기어·차속 신호를 받아 방향지시등 작동 시 시야를 넓히고 후진 시 가이드를 표시한다. 렌즈 히터로 김서림·결빙을 막는다. 영상 정지나 검은 화면을 감지하면 경고를 띄운다. 12V 차량 전원 사용.",
   "planNote": "일반적인 주간·야간 표시와 기본 기능 위주로 짠 계획 예시입니다.",
   "blocks": [
-    { "id": "cam", "label": "좌·우 외부 카메라", "stage": "sensor" },
-    { "id": "can", "label": "CAN 차량 신호", "stage": "sensor" },
-    { "id": "serdes", "label": "SerDes 영상 링크", "stage": "process" },
-    { "id": "isp", "label": "영상처리 ECU (HDR·보정)", "stage": "process" },
-    { "id": "mon", "label": "영상 감시 (freeze 감지)", "stage": "process" },
-    { "id": "disp", "label": "실내 디스플레이", "stage": "actuator" },
-    { "id": "heater", "label": "렌즈 히터", "stage": "actuator" },
-    { "id": "power", "label": "12V 전원", "stage": "support" }
+    {
+      "id": "cam",
+      "label": "좌·우 외부 카메라",
+      "stage": "sensor"
+    },
+    {
+      "id": "can",
+      "label": "CAN 차량 신호",
+      "stage": "sensor"
+    },
+    {
+      "id": "serdes",
+      "label": "SerDes 영상 링크",
+      "stage": "process"
+    },
+    {
+      "id": "isp",
+      "label": "영상처리 ECU (HDR·보정)",
+      "stage": "process"
+    },
+    {
+      "id": "mon",
+      "label": "영상 감시 (freeze 감지)",
+      "stage": "process"
+    },
+    {
+      "id": "disp",
+      "label": "실내 디스플레이",
+      "stage": "actuator"
+    },
+    {
+      "id": "heater",
+      "label": "렌즈 히터",
+      "stage": "actuator"
+    },
+    {
+      "id": "power",
+      "label": "12V 전원",
+      "stage": "support"
+    }
   ],
   "requirements": [
-    { "id": "REQ-01", "text": "후측방 영상을 glass-to-glass 지연 100ms 이하로 표시한다." },
-    { "id": "REQ-02", "text": "직사광선·야간·터널 등 모든 조도에서 후방 차량을 식별할 수 있다." },
-    { "id": "REQ-03", "text": "방향지시등 작동 시 시야를 넓히고, 후진 시 가이드를 표시한다." },
-    { "id": "REQ-04", "text": "영상 정지(freeze)·검은 화면을 0.5s 이내에 감지해 경고한다." },
-    { "id": "REQ-05", "text": "렌즈 김서림·결빙 시 히터로 시야를 회복한다." },
-    { "id": "REQ-06", "text": "시동 후 2s 이내에 영상을 표시하고, 좌·우가 바뀌지 않게 표시한다." }
+    {
+      "id": "REQ-01",
+      "text": "후측방 영상을 glass-to-glass 지연 100ms 이하로 표시한다."
+    },
+    {
+      "id": "REQ-02",
+      "text": "직사광선·야간·터널 등 모든 조도에서 후방 차량을 식별할 수 있다."
+    },
+    {
+      "id": "REQ-03",
+      "text": "방향지시등 작동 시 시야를 넓히고, 후진 시 가이드를 표시한다."
+    },
+    {
+      "id": "REQ-04",
+      "text": "영상 정지(freeze)·검은 화면을 0.5s 이내에 감지해 경고한다."
+    },
+    {
+      "id": "REQ-05",
+      "text": "렌즈 김서림·결빙 시 히터로 시야를 회복한다."
+    },
+    {
+      "id": "REQ-06",
+      "text": "시동 후 2s 이내에 영상을 표시하고, 좌·우가 바뀌지 않게 표시한다."
+    }
   ],
   "hazards": [
-    { "id": "HZ-01", "text": "영상이 멈췄는데 정상처럼 보여 차로 변경 중 충돌", "situation": "고속도로 차로 변경", "S": 2, "E": 4, "C": 2, "sg": "SG-01" },
-    { "id": "HZ-02", "text": "역광·전조등 눈부심으로 후방 차량을 못 봄", "situation": "일출·일몰, 야간 상향등", "S": 2, "E": 3, "C": 2, "sg": "SG-02" },
-    { "id": "HZ-03", "text": "지연이 커서 후방 차량 위치를 잘못 판단", "situation": "빠르게 접근하는 후방 차량", "S": 2, "E": 3, "C": 2, "sg": "SG-03" },
-    { "id": "HZ-04", "text": "좌·우 영상이 뒤바뀌어 표시", "situation": "조립·정비 후 첫 주행", "S": 2, "E": 2, "C": 3, "sg": "SG-04" }
+    {
+      "id": "HZ-01",
+      "text": "영상이 멈췄는데 정상처럼 보여 차로 변경 중 충돌",
+      "situation": "고속도로 차로 변경",
+      "S": 2,
+      "E": 4,
+      "C": 2,
+      "sg": "SG-01"
+    },
+    {
+      "id": "HZ-02",
+      "text": "역광·전조등 눈부심으로 후방 차량을 못 봄",
+      "situation": "일출·일몰, 야간 상향등",
+      "S": 2,
+      "E": 3,
+      "C": 2,
+      "sg": "SG-02"
+    },
+    {
+      "id": "HZ-03",
+      "text": "지연이 커서 후방 차량 위치를 잘못 판단",
+      "situation": "빠르게 접근하는 후방 차량",
+      "S": 2,
+      "E": 3,
+      "C": 2,
+      "sg": "SG-03"
+    },
+    {
+      "id": "HZ-04",
+      "text": "좌·우 영상이 뒤바뀌어 표시",
+      "situation": "조립·정비 후 첫 주행",
+      "S": 2,
+      "E": 2,
+      "C": 3,
+      "sg": "SG-04"
+    }
   ],
   "safetyGoals": [
-    { "id": "SG-01", "text": "영상 정지·검은 화면을 감지하고 운전자에게 알린다.", "safeState": "경고 표시 + 실제 거울 확인 안내" },
-    { "id": "SG-02", "text": "어떤 조도에서도 후방 차량을 식별 가능한 시인성을 유지한다.", "safeState": "시인성 저하 경고" },
-    { "id": "SG-03", "text": "영상 지연이 한계를 넘으면 경고한다.", "safeState": "지연 경고" },
-    { "id": "SG-04", "text": "각 디스플레이에 올바른 쪽 영상을 표시한다.", "safeState": "표시 중단 + 경고" }
+    {
+      "id": "SG-01",
+      "text": "영상 정지·검은 화면을 감지하고 운전자에게 알린다.",
+      "safeState": "경고 표시 + 실제 거울 확인 안내"
+    },
+    {
+      "id": "SG-02",
+      "text": "어떤 조도에서도 후방 차량을 식별 가능한 시인성을 유지한다.",
+      "safeState": "시인성 저하 경고"
+    },
+    {
+      "id": "SG-03",
+      "text": "영상 지연이 한계를 넘으면 경고한다.",
+      "safeState": "지연 경고"
+    },
+    {
+      "id": "SG-04",
+      "text": "각 디스플레이에 올바른 쪽 영상을 표시한다.",
+      "safeState": "표시 중단 + 경고"
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "q": "카메라 해상도와 프레임레이트는?",
+      "why": "지연·프레임 드롭 판정 기준을 정합니다.",
+      "assumption": "1280×960, 60fps"
+    },
+    {
+      "id": "Q2",
+      "q": "고장 경고는 어디에 표시하나요?",
+      "why": "디스플레이 자체가 고장일 때도 경고가 보이는지 확인해야 합니다.",
+      "assumption": "디스플레이 오버레이 + 계기판 경고등"
+    },
+    {
+      "id": "Q3",
+      "q": "동작 온도 범위는?",
+      "why": "환경 시험의 온도 조건을 정합니다.",
+      "assumption": "카메라 외부 -40~+85°C, 실내 -30~+70°C"
+    }
   ],
   "tests": [
-    { "id": "TC-ENV-01", "cat": "env", "title": "직사광선 역광 (낮은 태양 고도)", "condition": "일출·일몰 무렵 태양이 카메라 화각 안에 들어오는 방향으로 주행. 후방 10m·30m에 차량 배치.", "criteria": "플레어·포화가 있어도 후방 차량 윤곽 식별 가능. 식별 불가 시 시인성 경고(SG-02).", "reqs": ["REQ-02"], "sgs": ["SG-02"], "blocks": ["cam", "isp", "disp"], "why": "카메라는 거울과 달리 태양이 화각에 들어오면 화면 전체가 하얗게 날아갈 수 있다." },
-    { "id": "TC-ENV-02", "cat": "env", "title": "야간 후방 상향등 눈부심", "condition": "야간, 후방 10m 차량이 상향등 점등.", "criteria": "블루밍이 있어도 차로·차량 구분 가능.", "reqs": ["REQ-02"], "sgs": ["SG-02"], "blocks": ["cam", "isp", "disp"] },
-    { "id": "TC-ENV-03", "cat": "env", "title": "터널 진출입 조도 급변", "condition": "터널 진입·진출, 밝기 차 100배 이상.", "criteria": "노출 적응 1s 이내, 그 사이에도 후방 차량 식별 가능.", "reqs": ["REQ-02"], "sgs": ["SG-02"], "blocks": ["cam", "isp"] },
-    { "id": "TC-ENV-04", "cat": "env", "title": "결로·결빙 렌즈 회복", "condition": "-20°C 챔버 보관 후 실내 습도 환경으로 이동, 렌즈 결빙 상태에서 시동.", "criteria": "히터로 정해진 시간 안에 시야 회복.", "reqs": ["REQ-05"], "sgs": ["SG-02"], "blocks": ["heater", "cam"] },
-    { "id": "TC-ENV-05", "cat": "env", "title": "직사광선 하 고온 동작", "condition": "여름 직사광선 주차 후(카메라 하우징 +85°C, 실내 +70°C) 시동.", "criteria": "영상 표시·지연 사양 유지, 디스플레이 휘도 저하 허용치 이내.", "reqs": ["REQ-01", "REQ-06"], "sgs": ["SG-03"], "blocks": ["cam", "isp", "disp"] },
-    { "id": "TC-FUN-01", "cat": "func", "title": "glass-to-glass 지연 측정", "condition": "카메라 앞 ms 단위 LED 타이머와 디스플레이를 고속 카메라로 함께 촬영, 100회.", "criteria": "최대 지연 100ms 이하.", "reqs": ["REQ-01"], "sgs": ["SG-03"], "blocks": ["cam", "serdes", "isp", "disp"] },
-    { "id": "TC-FUN-02", "cat": "func", "title": "방향지시등·후진 시야 전환", "condition": "좌·우 방향지시등, 후진 기어 신호를 CAN으로 인가.", "criteria": "200ms 이내 시야 확장·가이드 표시, 해제 시 원복.", "reqs": ["REQ-03"], "sgs": [], "blocks": ["can", "isp", "disp"] },
-    { "id": "TC-FUN-03", "cat": "func", "title": "시동 후 표시 시간", "condition": "상온·저온·고온에서 시동 50회.", "criteria": "2s 이내 영상 표시.", "reqs": ["REQ-06"], "sgs": [], "blocks": ["power", "isp", "disp"] },
-    { "id": "TC-FUN-04", "cat": "func", "title": "좌·우 방향과 미러링 확인", "condition": "좌·우 카메라 앞에 서로 다른 표지판을 두고 표시 확인.", "criteria": "각 디스플레이에 올바른 쪽 영상이 거울처럼 반전되어 표시.", "reqs": ["REQ-06"], "sgs": ["SG-04"], "blocks": ["cam", "isp", "disp"] },
-    { "id": "TC-COM-01", "cat": "comm", "title": "CAN 방향지시등 신호 상실", "condition": "방향지시등 메시지 송신 중단, 값 범위 밖 신호 주입.", "criteria": "기본 시야를 유지하고 잘못된 시야 전환 없음.", "reqs": ["REQ-03"], "sgs": [], "blocks": ["can", "isp"] },
-    { "id": "TC-COM-02", "cat": "comm", "title": "SerDes 링크 품질 저하", "condition": "케이블 길이 최대, 커넥터 접촉 불량 모사, 노이즈 주입으로 프레임 드롭 유발.", "criteria": "프레임 드롭·링크 오류 감지 후 경고, 마지막 프레임을 정상처럼 계속 보여주지 않음.", "reqs": ["REQ-04"], "sgs": ["SG-01"], "blocks": ["serdes", "mon"] },
-    { "id": "TC-COM-03", "cat": "comm", "title": "CAN 버스 고부하 시 표시 지연", "condition": "버스 부하 80% 이상에서 방향지시등 신호 인가.", "criteria": "시야 전환 지연 200ms 이내 유지.", "reqs": ["REQ-03"], "sgs": [], "blocks": ["can", "isp"] },
-    { "id": "TC-FLT-01", "cat": "fault", "title": "영상 freeze 주입", "condition": "영상처리 경로에서 같은 프레임을 반복 출력하도록 고장 주입.", "criteria": "0.5s 이내 freeze 감지, 경고 표시.", "reqs": ["REQ-04"], "sgs": ["SG-01"], "blocks": ["isp", "mon", "disp"], "why": "멈춘 영상은 정상 영상과 구분이 어렵다. 가장 위험한 고장이라 별도 감지가 필요하다." },
-    { "id": "TC-FLT-02", "cat": "fault", "title": "카메라 분리·검은 화면", "condition": "주행 중 카메라 커넥터 분리, 카메라 전원 차단.", "criteria": "0.5s 이내 감지·경고.", "reqs": ["REQ-04"], "sgs": ["SG-01"], "blocks": ["cam", "mon", "disp"] },
-    { "id": "TC-FLT-03", "cat": "fault", "title": "디스플레이 백라이트 고장", "condition": "백라이트 구동 회로 개방.", "criteria": "고장 감지 후 계기판 등 다른 경로로 경고.", "reqs": ["REQ-04"], "sgs": ["SG-01"], "blocks": ["disp", "mon"] },
-    { "id": "TC-FLT-04", "cat": "fault", "title": "크랭킹 전압 강하 후 복귀", "condition": "12V → 6V 순간 강하(시동 크랭킹 모사) 후 복귀.", "criteria": "리셋되더라도 2s 이내 영상 복귀, 복귀 전까지는 경고.", "reqs": ["REQ-06"], "sgs": ["SG-01"], "blocks": ["power", "isp", "disp"] },
-    { "id": "TC-MIS-01", "cat": "misuse", "title": "세차 후 렌즈 물방울·오염", "condition": "고압 세차, 진흙 분사 후 주행.", "criteria": "시야 가림이 심하면 시인성 경고.", "reqs": ["REQ-02"], "sgs": ["SG-02"], "blocks": ["cam", "isp"] },
-    { "id": "TC-MIS-02", "cat": "misuse", "title": "밝기 최저 설정 후 주간 주행", "condition": "운전자가 야간에 밝기를 최저로 낮춘 뒤 주간 직사광선 아래 주행.", "criteria": "휘도 하한이 적용되어 화면 식별 가능.", "reqs": ["REQ-02"], "sgs": ["SG-02"], "blocks": ["disp"] },
-    { "id": "TC-MIS-03", "cat": "misuse", "title": "좌·우 카메라 커넥터 반대 장착", "condition": "정비 오류를 모사해 좌·우 커넥터를 바꿔 연결.", "criteria": "카메라 ID 불일치 감지, 표시 중단 + 경고.", "reqs": ["REQ-06"], "sgs": ["SG-04"], "blocks": ["cam", "isp"] },
-    { "id": "TC-MIS-04", "cat": "misuse", "title": "메뉴 화면이 영상을 가림", "condition": "주행 중 설정 메뉴를 열고 방향지시등 작동.", "criteria": "방향지시등 작동 시 메뉴가 닫히거나 영상 영역을 가리지 않음.", "reqs": ["REQ-03"], "sgs": [], "blocks": ["isp", "disp"] }
+    {
+      "id": "TC-ENV-01",
+      "cat": "env",
+      "title": "직사광선 역광 (낮은 태양 고도)",
+      "condition": "일출·일몰 무렵 태양이 카메라 화각 안에 들어오는 방향으로 주행. 후방 10m·30m에 차량 배치.",
+      "criteria": "플레어·포화가 있어도 후방 차량 윤곽 식별 가능. 식별 불가 시 시인성 경고(SG-02).",
+      "reqs": [
+        "REQ-02"
+      ],
+      "sgs": [
+        "SG-02"
+      ],
+      "blocks": [
+        "cam",
+        "isp",
+        "disp"
+      ],
+      "why": "카메라는 거울과 달리 태양이 화각에 들어오면 화면 전체가 하얗게 날아갈 수 있다."
+    },
+    {
+      "id": "TC-ENV-02",
+      "cat": "env",
+      "title": "야간 후방 상향등 눈부심",
+      "condition": "야간, 후방 10m 차량이 상향등 점등.",
+      "criteria": "블루밍이 있어도 차로·차량 구분 가능.",
+      "reqs": [
+        "REQ-02"
+      ],
+      "sgs": [
+        "SG-02"
+      ],
+      "blocks": [
+        "cam",
+        "isp",
+        "disp"
+      ]
+    },
+    {
+      "id": "TC-ENV-03",
+      "cat": "env",
+      "title": "터널 진출입 조도 급변",
+      "condition": "터널 진입·진출, 밝기 차 100배 이상.",
+      "criteria": "노출 적응 1s 이내, 그 사이에도 후방 차량 식별 가능.",
+      "reqs": [
+        "REQ-02"
+      ],
+      "sgs": [
+        "SG-02"
+      ],
+      "blocks": [
+        "cam",
+        "isp"
+      ]
+    },
+    {
+      "id": "TC-ENV-04",
+      "cat": "env",
+      "title": "결로·결빙 렌즈 회복",
+      "condition": "-20°C 챔버 보관 후 실내 습도 환경으로 이동, 렌즈 결빙 상태에서 시동.",
+      "criteria": "히터로 정해진 시간 안에 시야 회복.",
+      "reqs": [
+        "REQ-05"
+      ],
+      "sgs": [
+        "SG-02"
+      ],
+      "blocks": [
+        "heater",
+        "cam"
+      ]
+    },
+    {
+      "id": "TC-ENV-05",
+      "cat": "env",
+      "title": "직사광선 하 고온 동작",
+      "condition": "여름 직사광선 주차 후(카메라 하우징 +85°C, 실내 +70°C) 시동.",
+      "criteria": "영상 표시·지연 사양 유지, 디스플레이 휘도 저하 허용치 이내.",
+      "reqs": [
+        "REQ-01",
+        "REQ-06"
+      ],
+      "sgs": [
+        "SG-03"
+      ],
+      "blocks": [
+        "cam",
+        "isp",
+        "disp"
+      ]
+    },
+    {
+      "id": "TC-FUN-01",
+      "cat": "func",
+      "title": "glass-to-glass 지연 측정",
+      "condition": "카메라 앞 ms 단위 LED 타이머와 디스플레이를 고속 카메라로 함께 촬영, 100회.",
+      "criteria": "최대 지연 100ms 이하.",
+      "reqs": [
+        "REQ-01"
+      ],
+      "sgs": [
+        "SG-03"
+      ],
+      "blocks": [
+        "cam",
+        "serdes",
+        "isp",
+        "disp"
+      ]
+    },
+    {
+      "id": "TC-FUN-02",
+      "cat": "func",
+      "title": "방향지시등·후진 시야 전환",
+      "condition": "좌·우 방향지시등, 후진 기어 신호를 CAN으로 인가.",
+      "criteria": "200ms 이내 시야 확장·가이드 표시, 해제 시 원복.",
+      "reqs": [
+        "REQ-03"
+      ],
+      "sgs": [],
+      "blocks": [
+        "can",
+        "isp",
+        "disp"
+      ]
+    },
+    {
+      "id": "TC-FUN-03",
+      "cat": "func",
+      "title": "시동 후 표시 시간",
+      "condition": "상온·저온·고온에서 시동 50회.",
+      "criteria": "2s 이내 영상 표시.",
+      "reqs": [
+        "REQ-06"
+      ],
+      "sgs": [],
+      "blocks": [
+        "power",
+        "isp",
+        "disp"
+      ]
+    },
+    {
+      "id": "TC-FUN-04",
+      "cat": "func",
+      "title": "좌·우 방향과 미러링 확인",
+      "condition": "좌·우 카메라 앞에 서로 다른 표지판을 두고 표시 확인.",
+      "criteria": "각 디스플레이에 올바른 쪽 영상이 거울처럼 반전되어 표시.",
+      "reqs": [
+        "REQ-06"
+      ],
+      "sgs": [
+        "SG-04"
+      ],
+      "blocks": [
+        "cam",
+        "isp",
+        "disp"
+      ]
+    },
+    {
+      "id": "TC-COM-01",
+      "cat": "comm",
+      "title": "CAN 방향지시등 신호 상실",
+      "condition": "방향지시등 메시지 송신 중단, 값 범위 밖 신호 주입.",
+      "criteria": "기본 시야를 유지하고 잘못된 시야 전환 없음.",
+      "reqs": [
+        "REQ-03"
+      ],
+      "sgs": [],
+      "blocks": [
+        "can",
+        "isp"
+      ]
+    },
+    {
+      "id": "TC-COM-02",
+      "cat": "comm",
+      "title": "SerDes 링크 품질 저하",
+      "condition": "케이블 길이 최대, 커넥터 접촉 불량 모사, 노이즈 주입으로 프레임 드롭 유발.",
+      "criteria": "프레임 드롭·링크 오류 감지 후 경고, 마지막 프레임을 정상처럼 계속 보여주지 않음.",
+      "reqs": [
+        "REQ-04"
+      ],
+      "sgs": [
+        "SG-01"
+      ],
+      "blocks": [
+        "serdes",
+        "mon"
+      ]
+    },
+    {
+      "id": "TC-COM-03",
+      "cat": "comm",
+      "title": "CAN 버스 고부하 시 표시 지연",
+      "condition": "버스 부하 80% 이상에서 방향지시등 신호 인가.",
+      "criteria": "시야 전환 지연 200ms 이내 유지.",
+      "reqs": [
+        "REQ-03"
+      ],
+      "sgs": [],
+      "blocks": [
+        "can",
+        "isp"
+      ]
+    },
+    {
+      "id": "TC-FLT-01",
+      "cat": "fault",
+      "title": "영상 freeze 주입",
+      "condition": "영상처리 경로에서 같은 프레임을 반복 출력하도록 고장 주입.",
+      "criteria": "0.5s 이내 freeze 감지, 경고 표시.",
+      "reqs": [
+        "REQ-04"
+      ],
+      "sgs": [
+        "SG-01"
+      ],
+      "blocks": [
+        "isp",
+        "mon",
+        "disp"
+      ],
+      "why": "멈춘 영상은 정상 영상과 구분이 어렵다. 가장 위험한 고장이라 별도 감지가 필요하다."
+    },
+    {
+      "id": "TC-FLT-02",
+      "cat": "fault",
+      "title": "카메라 분리·검은 화면",
+      "condition": "주행 중 카메라 커넥터 분리, 카메라 전원 차단.",
+      "criteria": "0.5s 이내 감지·경고.",
+      "reqs": [
+        "REQ-04"
+      ],
+      "sgs": [
+        "SG-01"
+      ],
+      "blocks": [
+        "cam",
+        "mon",
+        "disp"
+      ]
+    },
+    {
+      "id": "TC-FLT-03",
+      "cat": "fault",
+      "title": "디스플레이 백라이트 고장",
+      "condition": "백라이트 구동 회로 개방.",
+      "criteria": "고장 감지 후 계기판 등 다른 경로로 경고.",
+      "reqs": [
+        "REQ-04"
+      ],
+      "sgs": [
+        "SG-01"
+      ],
+      "blocks": [
+        "disp",
+        "mon"
+      ]
+    },
+    {
+      "id": "TC-FLT-04",
+      "cat": "fault",
+      "title": "크랭킹 전압 강하 후 복귀",
+      "condition": "12V → 6V 순간 강하(시동 크랭킹 모사) 후 복귀.",
+      "criteria": "리셋되더라도 2s 이내 영상 복귀, 복귀 전까지는 경고.",
+      "reqs": [
+        "REQ-06"
+      ],
+      "sgs": [
+        "SG-01"
+      ],
+      "blocks": [
+        "power",
+        "isp",
+        "disp"
+      ]
+    },
+    {
+      "id": "TC-MIS-01",
+      "cat": "misuse",
+      "title": "세차 후 렌즈 물방울·오염",
+      "condition": "고압 세차, 진흙 분사 후 주행.",
+      "criteria": "시야 가림이 심하면 시인성 경고.",
+      "reqs": [
+        "REQ-02"
+      ],
+      "sgs": [
+        "SG-02"
+      ],
+      "blocks": [
+        "cam",
+        "isp"
+      ]
+    },
+    {
+      "id": "TC-MIS-02",
+      "cat": "misuse",
+      "title": "밝기 최저 설정 후 주간 주행",
+      "condition": "운전자가 야간에 밝기를 최저로 낮춘 뒤 주간 직사광선 아래 주행.",
+      "criteria": "휘도 하한이 적용되어 화면 식별 가능.",
+      "reqs": [
+        "REQ-02"
+      ],
+      "sgs": [
+        "SG-02"
+      ],
+      "blocks": [
+        "disp"
+      ]
+    },
+    {
+      "id": "TC-MIS-03",
+      "cat": "misuse",
+      "title": "좌·우 카메라 커넥터 반대 장착",
+      "condition": "정비 오류를 모사해 좌·우 커넥터를 바꿔 연결.",
+      "criteria": "카메라 ID 불일치 감지, 표시 중단 + 경고.",
+      "reqs": [
+        "REQ-06"
+      ],
+      "sgs": [
+        "SG-04"
+      ],
+      "blocks": [
+        "cam",
+        "isp"
+      ]
+    },
+    {
+      "id": "TC-MIS-04",
+      "cat": "misuse",
+      "title": "메뉴 화면이 영상을 가림",
+      "condition": "주행 중 설정 메뉴를 열고 방향지시등 작동.",
+      "criteria": "방향지시등 작동 시 메뉴가 닫히거나 영상 영역을 가리지 않음.",
+      "reqs": [
+        "REQ-03"
+      ],
+      "sgs": [],
+      "blocks": [
+        "isp",
+        "disp"
+      ]
+    }
   ],
   "plan": [
-    { "id": "P-01", "text": "주간·야간 일반 도로에서 영상 표시 확인", "covers": { "TC-ENV-02": "partial" } },
-    { "id": "P-02", "text": "지연 측정 (LED 타이머 촬영)", "covers": { "TC-FUN-01": "full" } },
-    { "id": "P-03", "text": "방향지시등 작동 시 시야 확장 확인", "covers": { "TC-FUN-02": "full" } },
-    { "id": "P-04", "text": "카메라 커넥터 분리 시 화면 확인", "covers": { "TC-FLT-02": "full" } },
-    { "id": "P-05", "text": "시동 후 표시 시간 측정 (상온)", "covers": { "TC-FUN-03": "partial" } },
-    { "id": "P-06", "text": "좌·우 영상 방향 확인", "covers": { "TC-FUN-04": "full" } }
+    {
+      "id": "P-01",
+      "text": "주간·야간 일반 도로에서 영상 표시 확인",
+      "covers": {
+        "TC-ENV-02": "partial"
+      }
+    },
+    {
+      "id": "P-02",
+      "text": "지연 측정 (LED 타이머 촬영)",
+      "covers": {
+        "TC-FUN-01": "full"
+      }
+    },
+    {
+      "id": "P-03",
+      "text": "방향지시등 작동 시 시야 확장 확인",
+      "covers": {
+        "TC-FUN-02": "full"
+      }
+    },
+    {
+      "id": "P-04",
+      "text": "카메라 커넥터 분리 시 화면 확인",
+      "covers": {
+        "TC-FLT-02": "full"
+      }
+    },
+    {
+      "id": "P-05",
+      "text": "시동 후 표시 시간 측정 (상온)",
+      "covers": {
+        "TC-FUN-03": "partial"
+      }
+    },
+    {
+      "id": "P-06",
+      "text": "좌·우 영상 방향 확인",
+      "covers": {
+        "TC-FUN-04": "full"
+      }
+    }
   ]
 }
