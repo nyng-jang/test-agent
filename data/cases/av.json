@@ -1,0 +1,69 @@
+{
+  "id": "av",
+  "name": "자율주행 대회 차량",
+  "tab": "자율주행",
+  "summary": "카메라로 차선·신호를 인식하고 LiDAR로 장애물을 감지해, 조향 서보와 구동 모터로 트랙을 자율 주행하는 소형 대회 차량.",
+  "systemInput": "1/10 스케일 자율주행 대회 차량. 전방 카메라로 차선과 정지 신호를 인식하고, 2D LiDAR로 전방 장애물을 감지한다. 임베디드 보드(인식·판단 SW)가 UART로 모터 제어기에 조향각·속도 명령을 50ms 주기로 보낸다. 조향은 서보, 구동은 DC 모터. 무선 E-stop 수신기가 모터 전원을 차단한다. 전원은 3S LiPo 배터리. 대회는 실외 트랙에서 주간에 진행된다.",
+  "planNote": "실제로 대회 전에 짰던 계획을 재구성한 예시입니다. 시험은 주로 저녁·야간에 실내외 트랙에서 했습니다.",
+  "blocks": [
+    { "id": "cam", "label": "전방 카메라", "stage": "sensor" },
+    { "id": "lidar", "label": "2D LiDAR", "stage": "sensor" },
+    { "id": "enc", "label": "엔코더·IMU", "stage": "sensor" },
+    { "id": "percep", "label": "인식 SW (차선·신호)", "stage": "process" },
+    { "id": "plan", "label": "판단·제어 SW", "stage": "process" },
+    { "id": "mcu", "label": "모터 제어기 (UART)", "stage": "process" },
+    { "id": "servo", "label": "조향 서보", "stage": "actuator" },
+    { "id": "motor", "label": "구동 모터", "stage": "actuator" },
+    { "id": "estop", "label": "E-stop 수신기", "stage": "support" },
+    { "id": "batt", "label": "3S LiPo 전원", "stage": "support" }
+  ],
+  "requirements": [
+    { "id": "REQ-01", "text": "주행 중 차선을 인식해 차선 중앙 ±10cm 이내를 유지한다." },
+    { "id": "REQ-02", "text": "정지 신호를 인식하면 정지선 앞에서 정지한다." },
+    { "id": "REQ-03", "text": "전방 1.0m 이내 장애물을 감지하면 충돌 전에 정지한다." },
+    { "id": "REQ-04", "text": "판단 SW → 모터 제어기 명령을 50ms 주기로 전달하고, 200ms 이상 끊기면 정지한다." },
+    { "id": "REQ-05", "text": "E-stop 신호 수신 시 0.5s 이내에 구동을 멈춘다." },
+    { "id": "REQ-06", "text": "배터리 전압이 10.5V 아래로 떨어지면 경고 후 안전하게 정지한다." }
+  ],
+  "hazards": [
+    { "id": "HZ-01", "text": "차선 인식 실패로 트랙 이탈·구조물 충돌", "situation": "주간 실외 트랙, 역광·직사광선", "S": 2, "E": 3, "C": 3, "sg": "SG-01" },
+    { "id": "HZ-02", "text": "장애물 미감지 또는 오검출로 충돌·급정지", "situation": "장애물 구간, 사람·차량 근접", "S": 2, "E": 3, "C": 3, "sg": "SG-02" },
+    { "id": "HZ-03", "text": "명령 두절 시 마지막 명령을 유지한 채 폭주", "situation": "보드 과열·통신 단선", "S": 2, "E": 2, "C": 3, "sg": "SG-03" },
+    { "id": "HZ-04", "text": "E-stop을 눌러도 정지하지 않음", "situation": "비상 상황, 관중·운영요원 근접", "S": 2, "E": 2, "C": 3, "sg": "SG-04" }
+  ],
+  "safetyGoals": [
+    { "id": "SG-01", "text": "차선 인식 신뢰도가 떨어지면 감속 후 정지한다.", "safeState": "감속 정지" },
+    { "id": "SG-02", "text": "전방 장애물이 있으면 충돌 전에 정지하고, 없는 장애물로 급정지하지 않는다.", "safeState": "정지" },
+    { "id": "SG-03", "text": "제어 명령이 끊기면 정해진 시간 안에 정지한다.", "safeState": "모터 출력 0" },
+    { "id": "SG-04", "text": "E-stop 입력 시 반드시 구동력을 차단한다.", "safeState": "모터 전원 차단" }
+  ],
+  "tests": [
+    { "id": "TC-ENV-01", "cat": "env", "title": "주간 직사광선·역광 차선 인식", "condition": "맑은 날 실외 트랙, 10~16시. 태양 정면(역광)·측면 두 방향으로 주행, 노면 조도 50,000 lux 이상, 차선 표면 반사 발생 구간 포함.", "criteria": "차선 중앙 ±10cm 유지, 인식 실패 프레임 5% 미만. 실패가 0.3s 이상 이어지면 감속 정지(SG-01) 동작.", "reqs": ["REQ-01"], "sgs": ["SG-01"], "blocks": ["cam", "percep"], "why": "대회는 주간 실외에서 열린다. 야간에만 튜닝한 노출·임계값은 강한 빛에서 차선을 놓친다." },
+    { "id": "TC-ENV-02", "cat": "env", "title": "야간 저조도 차선 인식", "condition": "노면 조도 10 lux 이하, 차량 조명만 사용. 직선·곡선 구간 각 5회.", "criteria": "차선 중앙 ±10cm 유지, 인식 실패 프레임 5% 미만.", "reqs": ["REQ-01"], "sgs": ["SG-01"], "blocks": ["cam", "percep"] },
+    { "id": "TC-ENV-03", "cat": "env", "title": "그림자·조도 급변 구간 통과", "condition": "건물·나무 그림자 경계, 터널형 구조물 진입·진출. 밝기 차 10배 이상.", "criteria": "노출 적응 0.5s 이내, 그 사이 차선 이탈 없음.", "reqs": ["REQ-01"], "sgs": ["SG-01"], "blocks": ["cam", "percep"] },
+    { "id": "TC-ENV-04", "cat": "env", "title": "직사광선 하 장시간 주행 (보드 발열)", "condition": "외기 30°C 이상 햇빛 아래 30분 연속 주행. 보드 온도·CPU 클럭 기록.", "criteria": "보드 온도 사용 한계 이하, 스로틀링이 있어도 명령 주기 50ms 유지.", "reqs": ["REQ-04"], "sgs": ["SG-03"], "blocks": ["percep", "plan"], "why": "햇빛은 카메라뿐 아니라 보드 발열로 처리 주기를 늦춘다." },
+    { "id": "TC-FUN-01", "cat": "func", "title": "직선·곡선 차선 유지", "condition": "직선, 반경 1m 곡선, S자 구간. 속도 3단계.", "criteria": "차선 중앙 ±10cm 유지.", "reqs": ["REQ-01"], "sgs": [], "blocks": ["cam", "percep", "plan", "servo"] },
+    { "id": "TC-FUN-02", "cat": "func", "title": "정지 신호 인식 후 정지선 정지", "condition": "정지 신호 표지 거리 3m·2m·1m에서 등장. 속도 3단계.", "criteria": "정지선 앞 0~20cm 안에 정지, 10회 중 10회.", "reqs": ["REQ-02"], "sgs": [], "blocks": ["cam", "percep", "plan", "motor"] },
+    { "id": "TC-FUN-03", "cat": "func", "title": "전방 장애물 정지", "condition": "박스형 장애물을 1.5m·1.0m·0.5m 전방에 배치. 정지 상태·주행 중 출현.", "criteria": "1.0m 이내 감지 시 장애물과 접촉 없이 정지.", "reqs": ["REQ-03"], "sgs": ["SG-02"], "blocks": ["lidar", "plan", "motor"] },
+    { "id": "TC-FUN-04", "cat": "func", "title": "저전압 경고 및 안전 정지", "condition": "가변 전원으로 배터리 전압을 12.6V → 10.0V로 천천히 낮춤.", "criteria": "10.5V에서 경고, 이후 2s 이내 감속 정지. 보드 리셋 없음.", "reqs": ["REQ-06"], "sgs": [], "blocks": ["batt", "plan", "motor"] },
+    { "id": "TC-COM-01", "cat": "comm", "title": "부하 상황 명령 주기 측정", "condition": "인식·로깅 최대 부하에서 UART 명령 타임스탬프 10분 기록.", "criteria": "명령 주기 50ms ± 10ms, 누락 0.1% 미만.", "reqs": ["REQ-04"], "sgs": ["SG-03"], "blocks": ["plan", "mcu"] },
+    { "id": "TC-COM-02", "cat": "comm", "title": "명령 두절 타임아웃 정지", "condition": "주행 중 UART 선을 분리하거나 판단 SW를 강제 종료.", "criteria": "200ms 이내 모터 출력 0, 마지막 조향각 유지 주행 없음.", "reqs": ["REQ-04"], "sgs": ["SG-03"], "blocks": ["plan", "mcu", "motor"] },
+    { "id": "TC-COM-03", "cat": "comm", "title": "대회장 무선 혼잡 환경 E-stop 링크", "condition": "2.4GHz 기기 다수(타 팀 송신기·Wi-Fi)가 켜진 상태, 트랙 최원거리.", "criteria": "E-stop 입력 후 0.5s 이내 정지, 10회 중 10회.", "reqs": ["REQ-05"], "sgs": ["SG-04"], "blocks": ["estop", "motor"] },
+    { "id": "TC-FLT-01", "cat": "fault", "title": "카메라 프레임 멈춤·분리", "condition": "주행 중 카메라 USB 분리, 또는 같은 프레임 반복 주입.", "criteria": "0.3s 이내 프레임 이상 감지, 감속 정지.", "reqs": ["REQ-01"], "sgs": ["SG-01"], "blocks": ["cam", "percep"] },
+    { "id": "TC-FLT-02", "cat": "fault", "title": "LiDAR 데이터 무효", "condition": "LiDAR 전원 차단, 빈 스캔·고정값 주입.", "criteria": "데이터 무효 판단 후 정지, 장애물 없음으로 처리하지 않음.", "reqs": ["REQ-03"], "sgs": ["SG-02"], "blocks": ["lidar", "plan"] },
+    { "id": "TC-FLT-03", "cat": "fault", "title": "E-stop 정지 시간", "condition": "최고 속도 주행 중 E-stop 입력, 20회.", "criteria": "0.5s 이내 구동 정지, 20회 중 20회.", "reqs": ["REQ-05"], "sgs": ["SG-04"], "blocks": ["estop", "motor"] },
+    { "id": "TC-FLT-04", "cat": "fault", "title": "전원 순간 강하 후 복귀", "condition": "급가속 시 배터리 전압이 순간 8V까지 떨어지도록 부하 인가.", "criteria": "보드 리셋 시 모터는 정지 상태로 시작, 자동 재출발 없음.", "reqs": ["REQ-06"], "sgs": ["SG-03"], "blocks": ["batt", "mcu", "motor"] },
+    { "id": "TC-MIS-01", "cat": "misuse", "title": "차선 닮은 패턴 오인식", "condition": "노면 이음매, 테이프 자국, 긴 그림자, 차선과 평행한 연석.", "criteria": "차선으로 오인해 경로를 바꾸지 않음.", "reqs": ["REQ-01"], "sgs": ["SG-01"], "blocks": ["cam", "percep"] },
+    { "id": "TC-MIS-02", "cat": "misuse", "title": "렌즈 플레어·반사광의 신호 오인식", "condition": "태양을 화면 안에 넣거나 금속·물 반사광이 카메라에 들어오는 각도.", "criteria": "정지 신호 오검출로 정지하지 않음, 실제 신호는 놓치지 않음.", "reqs": ["REQ-02"], "sgs": [], "blocks": ["cam", "percep"] },
+    { "id": "TC-MIS-03", "cat": "misuse", "title": "햇빛·바닥 반사로 장애물 오검출", "condition": "직사광선 아래 반사 노면, LiDAR에 햇빛 직접 입사.", "criteria": "없는 장애물로 급정지하지 않음(10분 주행 중 0회).", "reqs": ["REQ-03"], "sgs": ["SG-02"], "blocks": ["lidar", "plan"] },
+    { "id": "TC-MIS-04", "cat": "misuse", "title": "E-stop 해제만으로 재출발 금지", "condition": "정지 후 E-stop을 해제하되 시작 명령은 보내지 않음.", "criteria": "별도 시작 명령 전까지 정지 유지.", "reqs": ["REQ-05"], "sgs": ["SG-04"], "blocks": ["estop", "plan"] }
+  ],
+  "plan": [
+    { "id": "P-01", "text": "야간 트랙 차선 유지 주행 (직선·곡선)", "covers": { "TC-ENV-02": "full", "TC-FUN-01": "full" } },
+    { "id": "P-02", "text": "야간 정지 신호 인식 후 정지", "covers": { "TC-FUN-02": "full" } },
+    { "id": "P-03", "text": "실내 조명 아래 장애물 앞 정지", "covers": { "TC-FUN-03": "full" } },
+    { "id": "P-04", "text": "E-stop 눌러서 정지 확인 (근거리)", "covers": { "TC-FLT-03": "partial" } },
+    { "id": "P-05", "text": "모터 제어기 UART 연결 확인", "covers": { "TC-COM-01": "partial" } },
+    { "id": "P-06", "text": "배터리 완충 상태로 반복 주행", "covers": {} }
+  ]
+}

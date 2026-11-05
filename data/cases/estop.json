@@ -1,0 +1,68 @@
+{
+  "id": "estop",
+  "name": "무선 E-stop 시스템",
+  "tab": "무선 E-stop",
+  "summary": "운영자가 손에 든 송신기 버튼으로 자율주행 차량의 구동 전원을 무선으로 끊는 비상 정지 장치. 하트비트가 끊겨도 정지하는 fail-safe 구조.",
+  "systemInput": "자율주행 대회 차량용 무선 E-stop. 휴대용 송신기에 이중 접점 비상 버튼과 MCU, 2.4GHz RF 모듈이 있고 100ms 주기로 하트비트와 버튼 상태를 보낸다. 차량 수신기 MCU가 신호를 받아 릴레이를 구동하고, 릴레이가 모터 전원을 연결·차단한다. 수신기는 500ms 동안 유효 패킷을 못 받으면 정지한다. 정지 후 재가동은 버튼 해제와 별도 리셋 조작이 모두 있어야 한다. 송신기는 페어링 ID가 맞는 수신기만 제어한다. 송신기·수신기 모두 배터리로 동작한다.",
+  "planNote": "버튼을 누르면 서는지 위주로 짠 기본 계획 예시입니다.",
+  "blocks": [
+    { "id": "btn", "label": "비상 버튼 (이중 접점)", "stage": "sensor" },
+    { "id": "txbatt", "label": "송신기 배터리 감시", "stage": "sensor" },
+    { "id": "txmcu", "label": "송신기 MCU", "stage": "process" },
+    { "id": "rf", "label": "2.4GHz RF 링크", "stage": "process" },
+    { "id": "rxmcu", "label": "수신기 MCU", "stage": "process" },
+    { "id": "wdt", "label": "외부 워치독", "stage": "process" },
+    { "id": "relay", "label": "모터 전원 릴레이", "stage": "actuator" },
+    { "id": "led", "label": "상태 LED·부저", "stage": "actuator" },
+    { "id": "power", "label": "송·수신기 전원", "stage": "support" }
+  ],
+  "requirements": [
+    { "id": "REQ-01", "text": "버튼을 누르면 300ms 이내에 모터 전원을 차단한다." },
+    { "id": "REQ-02", "text": "수신기가 500ms 동안 유효 패킷을 받지 못하면 스스로 정지한다." },
+    { "id": "REQ-03", "text": "트랙 최원거리 50m에서도 REQ-01을 만족한다." },
+    { "id": "REQ-04", "text": "송신기 배터리 저전압 시 경고하고, 동작 불가 전압에서는 차량을 정지시킨다." },
+    { "id": "REQ-05", "text": "정지 후 재가동은 버튼 해제 + 별도 리셋 조작이 모두 있어야 한다." },
+    { "id": "REQ-06", "text": "페어링 ID가 다른 송신기의 신호는 무시한다." }
+  ],
+  "hazards": [
+    { "id": "HZ-01", "text": "버튼을 눌러도 차량이 멈추지 않음", "situation": "경기 중 차량 폭주, 사람 근접", "S": 3, "E": 3, "C": 3, "sg": "SG-01" },
+    { "id": "HZ-02", "text": "링크가 끊겼는데 차량이 계속 주행", "situation": "원거리·가림·혼신", "S": 2, "E": 3, "C": 3, "sg": "SG-02" },
+    { "id": "HZ-03", "text": "정지 후 의도치 않게 재출발", "situation": "정비 중 차량 옆에 사람이 있음", "S": 2, "E": 2, "C": 3, "sg": "SG-03" },
+    { "id": "HZ-04", "text": "다른 팀 송신기에 의해 오정지·오해제", "situation": "대회장 다수 팀 동시 운용", "S": 1, "E": 3, "C": 2, "sg": "SG-04" }
+  ],
+  "safetyGoals": [
+    { "id": "SG-01", "text": "비상 버튼 입력 시 반드시 구동 전원을 차단한다.", "safeState": "릴레이 개방" },
+    { "id": "SG-02", "text": "유효 신호가 끊기면 정해진 시간 안에 정지한다.", "safeState": "릴레이 개방" },
+    { "id": "SG-03", "text": "정지 후 의도된 리셋 없이는 재가동하지 않는다.", "safeState": "정지 유지" },
+    { "id": "SG-04", "text": "페어링되지 않은 송신기의 신호에 반응하지 않는다.", "safeState": "현재 상태 유지" }
+  ],
+  "tests": [
+    { "id": "TC-ENV-01", "cat": "env", "title": "거리·가림 조건 정지 지연", "condition": "10m·30m·50m, 사람·차량·금속 펜스로 송신기와 수신기 사이를 가림.", "criteria": "모든 조건에서 버튼 입력 후 300ms 이내 전원 차단.", "reqs": ["REQ-01", "REQ-03"], "sgs": ["SG-01"], "blocks": ["rf", "rxmcu", "relay"], "why": "트인 공간 근거리 시험만으로는 대회장 가림·반사 환경을 보장하지 못한다." },
+    { "id": "TC-ENV-02", "cat": "env", "title": "직사광선 고온·저온 송신기 동작", "condition": "송신기를 햇빛 아래 1시간 방치(+55°C) 후, 그리고 0°C에서 동작.", "criteria": "버튼 인식·송신 정상, 배터리 전압 강하 시 REQ-04 경고 동작.", "reqs": ["REQ-01", "REQ-04"], "sgs": ["SG-01"], "blocks": ["btn", "txmcu", "txbatt"] },
+    { "id": "TC-ENV-03", "cat": "env", "title": "주행 진동 중 수신기·릴레이", "condition": "차량 최고 속도로 요철 구간 주행 10분, 커넥터·릴레이 상태 기록.", "criteria": "진동으로 인한 릴레이 채터링·접촉 불량 0회, 정지 성능 유지.", "reqs": ["REQ-01"], "sgs": ["SG-01"], "blocks": ["rxmcu", "relay"] },
+    { "id": "TC-ENV-04", "cat": "env", "title": "우천·습기 버튼 동작", "condition": "송신기에 물 분무 후 버튼 조작, 결로 상태 포함.", "criteria": "버튼 오입력·미입력 없음.", "reqs": ["REQ-01"], "sgs": ["SG-01"], "blocks": ["btn", "txmcu"] },
+    { "id": "TC-FUN-01", "cat": "func", "title": "버튼 → 전원 차단 시간", "condition": "근거리, 차량 정지·주행 상태 각 20회. 버튼 접점과 릴레이 출력을 오실로스코프로 측정.", "criteria": "300ms 이내, 40회 중 40회.", "reqs": ["REQ-01"], "sgs": ["SG-01"], "blocks": ["btn", "txmcu", "rf", "rxmcu", "relay"] },
+    { "id": "TC-FUN-02", "cat": "func", "title": "리셋 절차", "condition": "정지 후 (1) 버튼만 해제, (2) 리셋만 조작, (3) 둘 다 조작.", "criteria": "(3)에서만 재가동.", "reqs": ["REQ-05"], "sgs": ["SG-03"], "blocks": ["btn", "rxmcu", "relay"] },
+    { "id": "TC-FUN-03", "cat": "func", "title": "상태 표시", "condition": "정상·정지·링크 상실·저전압 상태를 차례로 만듦.", "criteria": "상태별 LED·부저 패턴이 사양과 일치.", "reqs": ["REQ-04"], "sgs": [], "blocks": ["led", "rxmcu"] },
+    { "id": "TC-FUN-04", "cat": "func", "title": "송신기 저전압 경고", "condition": "가변 전원으로 송신기 전압을 정격 → 동작 불가 전압까지 낮춤.", "criteria": "경고 전압에서 경고, 동작 불가 전압 전에 차량 정지.", "reqs": ["REQ-04"], "sgs": ["SG-02"], "blocks": ["txbatt", "txmcu"] },
+    { "id": "TC-COM-01", "cat": "comm", "title": "하트비트 상실 정지", "condition": "주행 중 송신기 전원 차단, RF 모듈 분리, 차폐 상자에 넣기.", "criteria": "마지막 유효 패킷 후 500ms ± 50ms 안에 릴레이 개방.", "reqs": ["REQ-02"], "sgs": ["SG-02"], "blocks": ["rf", "rxmcu", "relay"], "why": "버튼 시험만 하면 '신호가 없을 때 서는지'는 확인되지 않는다. fail-safe의 핵심이다." },
+    { "id": "TC-COM-02", "cat": "comm", "title": "2.4GHz 혼잡 환경 패킷 손실", "condition": "Wi-Fi AP 3대 이상, 타 송신기 5대 동시 동작. 패킷 손실률과 지연 기록.", "criteria": "손실률이 높아져도 정지 지연 300ms 이내, 오정지는 운영 허용치 이내.", "reqs": ["REQ-01", "REQ-02"], "sgs": ["SG-01", "SG-02"], "blocks": ["rf", "rxmcu"] },
+    { "id": "TC-COM-03", "cat": "comm", "title": "페어링 ID 불일치 패킷", "condition": "다른 ID로 설정한 송신기에서 정지·해제 패킷 송신.", "criteria": "수신기 상태 변화 없음.", "reqs": ["REQ-06"], "sgs": ["SG-04"], "blocks": ["rf", "rxmcu"] },
+    { "id": "TC-COM-04", "cat": "comm", "title": "손상·중복·지연 패킷", "condition": "CRC 오류, 같은 시퀀스 번호 재전송, 오래된 패킷 재생 주입.", "criteria": "무효 패킷은 하트비트로 인정하지 않음, 오래된 해제 패킷으로 재가동하지 않음.", "reqs": ["REQ-02", "REQ-05"], "sgs": ["SG-02", "SG-03"], "blocks": ["rf", "rxmcu"] },
+    { "id": "TC-FLT-01", "cat": "fault", "title": "릴레이 접점 융착", "condition": "릴레이 접점을 강제로 붙인 상태(또는 융착 모사)에서 정지 입력.", "criteria": "보조 접점 피드백으로 융착 감지, 2차 차단 수단 동작 및 경고.", "reqs": ["REQ-01"], "sgs": ["SG-01"], "blocks": ["relay", "rxmcu"], "why": "릴레이가 붙으면 SW가 아무리 정상이어도 전원이 끊기지 않는다." },
+    { "id": "TC-FLT-02", "cat": "fault", "title": "수신기 MCU 멈춤", "condition": "수신기 펌웨어를 무한 루프로 멈춤(디버거 정지 포함).", "criteria": "외부 워치독이 릴레이를 개방, 차량 정지.", "reqs": ["REQ-02"], "sgs": ["SG-02"], "blocks": ["rxmcu", "wdt", "relay"] },
+    { "id": "TC-FLT-03", "cat": "fault", "title": "수신기 전원 상실", "condition": "주행 중 수신기 전원선 분리.", "criteria": "릴레이는 전원이 없으면 개방되는 구조(정지가 기본 상태)임을 확인.", "reqs": ["REQ-02"], "sgs": ["SG-02"], "blocks": ["power", "relay"] },
+    { "id": "TC-FLT-04", "cat": "fault", "title": "버튼 한쪽 접점 고장", "condition": "이중 접점 중 한쪽을 단선·단락.", "criteria": "불일치 감지 후 정지, 재가동 불가 및 경고.", "reqs": ["REQ-01"], "sgs": ["SG-01"], "blocks": ["btn", "txmcu"] },
+    { "id": "TC-MIS-01", "cat": "misuse", "title": "버튼 짧게 탭", "condition": "버튼을 50ms 이하로 짧게 눌렀다 뗌.", "criteria": "정지 상태가 래치되어 유지됨.", "reqs": ["REQ-01", "REQ-05"], "sgs": ["SG-01"], "blocks": ["btn", "txmcu", "rxmcu"] },
+    { "id": "TC-MIS-02", "cat": "misuse", "title": "버튼 해제만으로 재출발 시도", "condition": "정지 후 운영자가 버튼만 해제.", "criteria": "정지 유지.", "reqs": ["REQ-05"], "sgs": ["SG-03"], "blocks": ["btn", "rxmcu"] },
+    { "id": "TC-MIS-03", "cat": "misuse", "title": "타 팀 송신기 동시 사용", "condition": "같은 채널을 쓰는 타 팀 송신기를 켜고 버튼 조작.", "criteria": "우리 차량 상태 변화 없음.", "reqs": ["REQ-06"], "sgs": ["SG-04"], "blocks": ["rf", "rxmcu"] },
+    { "id": "TC-MIS-04", "cat": "misuse", "title": "송신기 낙하 충격", "condition": "1m 높이에서 콘크리트 바닥으로 낙하 5회.", "criteria": "낙하 후 동작 정상이거나, 고장 시 정지 쪽으로 동작.", "reqs": ["REQ-01"], "sgs": ["SG-01"], "blocks": ["btn", "txmcu", "txbatt"] }
+  ],
+  "plan": [
+    { "id": "P-01", "text": "근거리에서 버튼 눌러 정지 확인", "covers": { "TC-FUN-01": "full" } },
+    { "id": "P-02", "text": "정지 시간 스톱워치로 측정", "covers": { "TC-FUN-01": "partial" } },
+    { "id": "P-03", "text": "30m 거리에서 정지 확인 (트인 공간)", "covers": { "TC-ENV-01": "partial" } },
+    { "id": "P-04", "text": "리셋 후 재가동 확인", "covers": { "TC-FUN-02": "partial" } },
+    { "id": "P-05", "text": "LED 상태 표시 확인", "covers": { "TC-FUN-03": "full" } }
+  ]
+}
