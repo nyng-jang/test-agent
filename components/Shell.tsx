@@ -25,8 +25,8 @@ export default function Shell({ step, children }: { step: 1 | 2 | 3; children: R
 
   const steps = [
     { n: 1, label: "시스템 입력", href: "/system", on: true },
-    { n: 2, label: "내 시험 계획", href: "/plan", on: analysisOk },
-    { n: 3, label: "보완 항목 결과", href: "/result", on: gapOk },
+    { n: 2, label: "시험 계획", href: "/plan", on: analysisOk },
+    { n: 3, label: "분석 결과", href: "/result", on: gapOk },
   ];
 
   return (
@@ -34,7 +34,7 @@ export default function Shell({ step, children }: { step: 1 | 2 | 3; children: R
       <a href="#main" className="skip">본문으로 건너뛰기</a>
       <header className="topbar">
         <div className="wrap topbar-in">
-          <Link href="/" className="brand">시험항목 누락 탐지</Link>
+          <Link href="/" className="brand"><span className="brand-mark" aria-hidden="true">✓</span><span>시험항목 누락 탐지 에이전트</span></Link>
           <nav className="steps" aria-label="단계">
             {steps.map((s) =>
               s.on ? (
@@ -69,7 +69,7 @@ export default function Shell({ step, children }: { step: 1 | 2 | 3; children: R
 export function StepHead({ n, title, desc }: { n: number; title: string; desc: React.ReactNode }) {
   return (
     <div className="step-head">
-      <div className="small muted">{n}단계</div>
+      <div className="step-eyebrow"><span>STEP 0{n}</span><span className="eyebrow-line" /><span>시험항목 누락 탐지</span></div>
       <h1>{title}</h1>
       <p className="muted">{desc}</p>
     </div>

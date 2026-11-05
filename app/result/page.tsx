@@ -79,9 +79,9 @@ function ResultStep() {
       <StepHead n={3} title="시험 계획 분석 결과"
         desc={<><b>{data.name}</b> · 내 계획 {data.plan.length}개를 에이전트 제안 {s.total}개와 대조했습니다.</>} />
 
-      <section className="section" style={{ marginTop: 10 }}>
+      <section className="section result-summary" style={{ marginTop: 10 }}>
         <Overview s={s} />
-        <p className="headline">
+        <p className={`headline decision-callout ${s.missing.length ? "has-gaps" : "all-covered"}`}>
           {s.missing.length === 0
             ? "계획에서 빠진 시험이 없습니다."
             : <>보완이 필요한 시험이 <b>{s.missing.length}개</b> 있고, 그중 <b className="gap-t">우선순위 높음 {high}개</b>부터 확인하세요.</>}
