@@ -18,8 +18,7 @@ const GUIDE = [
   { k: "전원·통신", d: "전압, 전원 변동, CAN·무선 등", ex: "송신기 3.7V 리튬, 수신기 12V, 2.4GHz RF" },
   { k: "사용 환경", d: "온도, 진동, 습도, 외부 광원, 주변 기기", ex: "실외 대회장 주간, 최대 50m, 타 팀 무선 기기 다수" },
 ];
-const TEMPLATE = GUIDE.map((g) => `[${g.k}] `).join("
-");
+const TEMPLATE = GUIDE.map((g) => `[${g.k}] `).join("\n");
 
 export default function SystemPage() {
   return <Shell step={1}><SystemStep /></Shell>;
@@ -93,9 +92,7 @@ function SystemStep() {
               ))}
             </dl>
             {live && (
-              <button type="button" className="btn" onClick={() => update({ systemInput: flow.systemInput ? `${flow.systemInput}
-
-${TEMPLATE}` : TEMPLATE })}>
+              <button type="button" className="btn" onClick={() => update({ systemInput: flow.systemInput ? `${flow.systemInput}\n\n${TEMPLATE}` : TEMPLATE })}>
                 항목 틀을 입력칸에 넣기
               </button>
             )}
