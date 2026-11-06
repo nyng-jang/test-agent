@@ -889,3 +889,8 @@ footer { max-width: 1120px; line-height: 1.7; }
   .rs-planstats div:nth-child(2) { border-right: 0; }
   .rs-planstats div:nth-child(-n+2) { border-bottom: 1px solid var(--rs-line); }
 }
+@media (max-width: 560px) {
+  .rs-table th:first-child, .rs-table td:first-child { display: none; }
+  .rs-table td:nth-child(2), .rs-table th:nth-child(2) { padding-left: 16px; }
+  .rs-table td { padding: 10px 8px; }
+}
