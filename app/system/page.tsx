@@ -11,7 +11,7 @@ import { analyzeLive } from "@/lib/ai";
 import { demoById } from "@/lib/demo";
 import { useFlow } from "@/lib/flow";
 import { DEMO_CASES } from "@/lib/demo";
-import type { Analysis, Fact } from "@/lib/types";
+import type { Analysis, Block, Fact, Stage } from "@/lib/types";
 
 const GUIDE = [
   { k: "시스템 개요", d: "어떤 기능을 하는 시스템인가", ex: "운영자 버튼으로 차량 구동 전원을 무선 차단하는 비상정지 장치" },
@@ -201,9 +201,13 @@ function SystemStep() {
           </section>
 
           <section className="section">
-            <h2>구성 블록</h2>
-            <p className="desc">센서 → 처리 → 액추에이터 흐름으로 정리한 시스템 구조입니다.</p>
-            <BlockDiagram data={{ blocks: a.blocks, tests: [] }} plain />
+            <h2>구성 블록 ({a.blocks.length})</h2>
+            <p className="desc">센서 → 처리 → 액추에이터 흐름으로 정리한 시스템 구조입니다. {live ? "이름을 고치거나 위치를 옮기고, 빠진 블록은 추가하세요. 시험 항목이 이 블록에 연결됩니다." : ""}</p>
+            {live ? (
+              <BlockEditor blocks={a.blocks} onChange={(blocks) => update({ analysis: { ...a, blocks } })} />
+            ) : (
+              <BlockDiagram data={{ blocks: a.blocks, tests: [] }} plain />
+            )}
           </section>
 
           <section className="section">
@@ -214,12 +218,52 @@ function SystemStep() {
 
           <div className="actions">
             <span className="spacer" />
-            <button className="btn primary lg" disabled={!analysisOk || a.requirements.some((r) => !r.text.trim())} onClick={() => router.push("/plan")}>
+            <button className="btn primary lg" disabled={!analysisOk || a.requirements.some((r) => !r.text.trim()) || a.blocks.some((b) => !b.label.trim())} onClick={() => router.push("/plan")}>
               다음: 내 시험 계획 →
             </button>
           </div>
         </>
       )}
     </>
+  );
+}
+
+const STAGE_OPTS: { id: Stage; label: string }[] = [
+  { id: "sensor", label: "센서·입력" },
+  { id: "process", label: "처리·통신" },
+  { id: "actuator", label: "액추에이터·출력" },
+  { id: "support", label: "공통 (전원·안전)" },
+];
+
+/** 구성 블록 편집: 이름 고치기, 단계 옮기기, 삭제, 추가 */
+function BlockEditor({ blocks, onChange }: { blocks: Block[]; onChange: (b: Block[]) => void }) {
+  const set = (id: string, patch: Partial<Block>) => onChange(blocks.map((b) => (b.id === id ? { ...b, ...patch } : b)));
+  const add = (stage: Stage) => {
+    let n = blocks.length + 1;
+    while (blocks.some((b) => b.id === `u${n}`)) n++;
+    onChange([...blocks, { id: `u${n}`, label: "", stage }]);
+  };
+  return (
+    <div className="card block-editor">
+      {STAGE_OPTS.map((st) => {
+        const list = blocks.filter((b) => b.stage === st.id);
+        return (
+          <div key={st.id} className={`be-col be-${st.id}`}>
+            <h4>{st.label} <span className="muted">{list.length}</span></h4>
+            {list.map((b) => (
+              <div key={b.id} className="be-row">
+                <input type="text" value={b.label} placeholder="블록 이름" aria-label={`${st.label} 블록 이름`}
+                  autoFocus={!b.label} onChange={(e) => set(b.id, { label: e.target.value })} />
+                <select value={b.stage} aria-label={`${b.label || "블록"} 위치`} onChange={(e) => set(b.id, { stage: e.target.value as Stage })}>
+                  {STAGE_OPTS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </select>
+                <button type="button" className="icon-btn" aria-label={`${b.label || "블록"} 삭제`} onClick={() => onChange(blocks.filter((x) => x.id !== b.id))}>×</button>
+              </div>
+            ))}
+            <button type="button" className="btn be-add" onClick={() => add(st.id)}>+ 추가</button>
+          </div>
+        );
+      })}
+    </div>
   );
 }

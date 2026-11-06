@@ -29,7 +29,7 @@ export const flowPremises = (f: FlowState): Premise[] => premisesOf(f.analysis, 
 
 export const gapKeyOf = (a: Analysis | null, plan: string[], premises: Premise[]) =>
   JSON.stringify({
-    r: a?.requirements, s: a?.safetyGoals, b: a?.blocks?.map((x) => x.id),
+    r: a?.requirements, s: a?.safetyGoals, b: a?.blocks?.map((x) => [x.id, x.label, x.stage]),
     p: plan.map((x) => x.trim()).filter(Boolean), q: premises.map((x) => [x.id, x.kind, x.text]),
   });
 
