@@ -10,6 +10,19 @@
 </p>
 
 <p align="center">
+  <a href="https://test-agent-rho.vercel.app/"><img alt="Live demo" src="https://img.shields.io/badge/demo-live-2563EB?style=flat-square&logo=vercel&logoColor=white" /></a>
+  <img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=nextdotjs&logoColor=white" />
+  <img alt="React 19" src="https://img.shields.io/badge/React-19-149ECA?style=flat-square&logo=react&logoColor=white" />
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white" />
+  <img alt="Deployed on Vercel" src="https://img.shields.io/badge/deploy-Vercel-000000?style=flat-square&logo=vercel&logoColor=white" />
+  <br />
+  <img alt="AI: Claude or Gemini" src="https://img.shields.io/badge/AI-Claude%20%7C%20Gemini-6B4FBB?style=flat-square" />
+  <img alt="Bring your own key" src="https://img.shields.io/badge/API%20key-BYOK%20(browser%20only)-0F766E?style=flat-square" />
+  <img alt="No server" src="https://img.shields.io/badge/server%20API-none-64748B?style=flat-square" />
+  <img alt="Functional safety concept" src="https://img.shields.io/badge/ISO%2026262-concept%20applied-B45309?style=flat-square" />
+</p>
+
+<p align="center">
   <a href="https://test-agent-rho.vercel.app/"><strong>라이브 데모 열기 →</strong></a>
   &nbsp;·&nbsp;
   <a href="#작동-방식">작동 방식</a>
@@ -31,13 +44,27 @@ TEST AGENT는 이런 빈틈을 더 체계적으로 점검할 수 있도록 만�
 
 실제 서비스는 로그인 화면에서 **키 없이 체험하기**를 선택해 확인할 수 있습니다. 세 가지 검증 사례로 시스템 입력부터 결과 확인까지 살펴볼 수 있습니다.
 
-> **화면 캡처 자리 — 시스템 입력**
->
-> 실제 UI 이미지 자산을 저장소에서 확인할 수 없어 임의의 제품 화면을 만들지 않았습니다. 라이브 데모에서 시스템 입력 화면을 확인하세요.
+**로그인** — 본인 Gemini·Claude API 키로 시작하거나, 키 없이 체험합니다. 오른쪽 미리보기는 실제 사례 데이터로 그린 화면입니다.
 
-> **화면 캡처 자리 — 누락 분석 결과**
->
-> 실제 UI 이미지 자산을 저장소에서 확인할 수 없어 임의의 제품 화면을 만들지 않았습니다. 라이브 데모에서 사례를 선택한 뒤 보완 항목과 추적 화면을 확인하세요.
+<img src="docs/screenshots/login.png" alt="로그인 화면: 왼쪽 로그인 패널과 오른쪽 제품 화면 미리보기" />
+
+**1 · 시스템 입력** — 시스템 설명을 분석해 구성 블록·요구사항·위험을 정리합니다. 왼쪽 메뉴로 각 섹션을 오갑니다.
+
+<img src="docs/screenshots/system.png" alt="시스템 입력 화면: 사이드바와 시스템 설명 입력칸, 분석 요약" />
+
+구성 블록은 구조도에서 바로 고칩니다. 이름을 눌러 수정하고, ⠿를 잡아 다른 칸으로 끌어 옮기고, 칸마다 블록을 추가합니다.
+
+<img src="docs/screenshots/blocks.png" alt="구성 블록 편집: 센서·처리·액추에이터·공통 칸으로 나뉜 구조도" />
+
+**2 · 시험 계획** — 계획을 자유 형식·항목별·파일로 넣으면, 위쪽에서 이름만 있는 항목과 확인이 필요한 정보를 바로 보여줍니다.
+
+<img src="docs/screenshots/plan.png" alt="시험 계획 화면: 계획 점검 요약과 입력칸" />
+
+**3 · 분석 결과** — 커버리지와 카테고리별 반영 상태, 보완 우선순위를 요약하고, 시험 표에서 항목을 고르면 오른쪽에 조건·판정 기준·근거가 나옵니다.
+
+<img src="docs/screenshots/result.png" alt="분석 결과 화면: 요약 지표, 카테고리별 반영 막대, 보완 항목 표와 상세 패널" />
+
+<sub>화면은 키 없이 체험의 자율주행 대회 차량 사례입니다.</sub>
 
 ## 핵심 기능
 
@@ -81,7 +108,38 @@ npm run validate
 
 키 없이 체험하는 결과 화면 하단에도 사례별 검증 기준이 표시됩니다.
 
+## 로컬에서 실행하기
+
+```bash
+npm install
+npm run dev        # http://localhost:3000
+npm run validate   # 사례 데이터 검증
+npm run typecheck  # 타입 검사
+npm run build      # 프로덕션 빌드
+```
+
+환경 변수는 필요 없습니다. 로그인 화면에서 본인 API 키를 넣거나 **키 없이 체험하기**를 누르면 됩니다.
+
 ## 기술 및 배포
+
+| 영역 | 사용 기술 |
+| --- | --- |
+| 프레임워크 | Next.js 16 (App Router), React 19, TypeScript |
+| 스타일 | 일반 CSS + 색 토큰, 밝은·어두운 모드 |
+| AI | Gemini 또는 Claude API (브라우저에서 직접 호출) |
+| 파일 가져오기 | read-excel-file (xlsx), 내장 CSV·JSON 파서 |
+| 배포 | Vercel, 정적 페이지 |
+
+## 프로젝트 구조
+
+```
+app/            페이지: / (로그인), /system, /plan, /result
+components/     공통 화면 틀(AppFrame), 결과 섹션, 로그인 미리보기
+lib/            분석·우선순위 계산, AI 호출, 프롬프트, 계획 파일 읽기
+data/cases/     키 없이 체험용 사례 데이터 (av, estop, dsm)
+scripts/        사례 데이터 검증 (npm run validate)
+docs/           README 화면 캡처
+```
 
 TEST AGENT는 Next.js 앱으로 배포되며 Vercel 데모에서 이용할 수 있습니다. 저장소를 Vercel에 연결하면 배포할 수 있고, 현재 구성에는 필요한 환경 변수가 없습니다. 페이지는 정적으로 생성됩니다.
 
