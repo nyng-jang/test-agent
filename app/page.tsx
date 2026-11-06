@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useFlow } from "@/lib/flow";
 import { listModels, pickDefault, PROVIDER_LABEL, type Provider } from "@/lib/llm";
+import LoginPreview from "@/components/LoginPreview";
 
 const KEY_HELP: Record<Provider, { url: string; label: string; ph: string }> = {
   claude: { url: "https://console.anthropic.com/settings/keys", label: "Anthropic Console", ph: "sk-ant-…" },
@@ -49,78 +50,81 @@ export default function StartPage() {
   };
 
   return (
-    <main className="wrap login">
-      <div className="hero">
-        <img src="/logo.png" alt="" className="hero-logo" width={64} height={64} />
-        <h1>시험항목 누락 탐지 에이전트</h1>
-        <p className="lead">
-          시스템 설명과 내가 짠 시험 계획을 넣으면, 시험 항목을 환경·기능·통신·고장·오작동 다섯 갈래로 펼쳐 놓고 <b>계획에서 빠진 조건</b>을 알려줍니다. 시험을 대신 설계하는 도구가 아니라, 사람이 짠 계획의 빈틈을 잡는 보조 도구입니다.
-        </p>
-        <div className="story">
-          <b>만든 이유.</b> 자율주행 대회를 준비하며 시험을 주로 야간에 했고, 주간 직사광선 조건은 검증하지 못했습니다. 대회 당일 낮에 차선 인식 오류가 났습니다. 시험 조건 하나가 빠지면 그대로 실패로 이어진다는 걸 겪고 만들었습니다.
+    <main className="auth">
+      <section className="auth-product" aria-labelledby="product-name">
+        <div className="auth-brand">
+          <span className="auth-logo"><img src="/logo.png" alt="" width={22} height={22} /></span>
+          <span>TEST AGENT</span>
         </div>
-        <ol className="how small muted">
-          <li><b>시스템 입력</b> AI가 구성 블록·요구사항·위험을 분석하고, 빠진 정보는 질문합니다.</li>
-          <li><b>내 시험 계획</b> 한 줄씩 쓰거나 CSV·JSON·Excel 파일로 불러옵니다.</li>
-          <li><b>결과</b> 보완이 필요한 시험 항목을 위험도 순으로 보여줍니다.</li>
-        </ol>
-      </div>
+        <div className="auth-intro">
+          <h1 id="product-name">Test Plan Analyzer</h1>
+          <p>
+            시스템 설명과 직접 짠 시험 계획을 넣으면, 시험 항목을 환경·기능·통신·고장·오작동으로 나눠 펼치고
+            계획에서 빠졌거나 일부만 반영된 조건을 위험도 순으로 보여줍니다.
+          </p>
+        </div>
+        <LoginPreview />
+      </section>
 
-      {ready && mode && (
-        <div className="notice" style={{ marginBottom: 14, maxWidth: 760 }}>
-          진행 중인 작업이 있습니다. <button className="btn" style={{ marginLeft: 8 }} onClick={() => router.push("/system")}>이어서 하기</button>
-        </div>
-      )}
-      <div className="grid2" style={{ marginBottom: 40 }}>
-        <form className="card" onSubmit={check}>
-          <h2 style={{ fontSize: 17 }}>내 API 키로 분석</h2>
-          <p className="small muted" style={{ margin: "4px 0 0" }}>
-            아무 시스템이나 AI로 실제 분석합니다. 호출 비용은 키 주인에게 청구됩니다.
-          </p>
-          <div className="seg" role="radiogroup" aria-label="AI 제공사" style={{ marginTop: 12 }}>
-            {(["gemini", "claude"] as Provider[]).map((p) => (
-              <button key={p} type="button" role="radio" aria-checked={provider === p} aria-pressed={provider === p} className="btn" onClick={() => changeProvider(p)}>
-                {PROVIDER_LABEL[p]}
-              </button>
-            ))}
+      <section className="auth-panel" aria-labelledby="login-title">
+        <div className="auth-box">
+          <div className="auth-brand auth-brand-m" aria-hidden>
+            <span className="auth-logo"><img src="/logo.png" alt="" width={22} height={22} /></span>
+            <span>TEST AGENT · Test Plan Analyzer</span>
           </div>
-          <label className="f" htmlFor="key">{PROVIDER_LABEL[provider]} API 키</label>
-          <input id="key" type="password" value={key} placeholder={KEY_HELP[provider].ph} autoComplete="off" spellCheck={false}
-            onChange={(e) => { setKey(e.target.value); setModels([]); setModel(""); }} />
-          <div className="small muted" style={{ marginTop: 4 }}>
-            키 발급: <a href={KEY_HELP[provider].url} target="_blank" rel="noreferrer">{KEY_HELP[provider].label}</a>
-          </div>
-          {models.length === 0 ? (
-            <button className="btn primary lg" style={{ marginTop: 14, width: "100%" }} disabled={busy || key.trim().length < 10}>
-              {busy ? "키 확인 중…" : "키 확인"}
-            </button>
-          ) : (
-            <>
-              <div className="notice" style={{ marginTop: 12 }}>키를 확인했습니다. 쓸 수 있는 모델 {models.length}개.</div>
-              <label className="f" htmlFor="model">모델</label>
-              <select id="model" value={model} onChange={(e) => setModel(e.target.value)} style={{ width: "100%" }}>
-                {models.map((m) => <option key={m} value={m}>{m}</option>)}
-              </select>
-              <button type="button" className="btn primary lg" style={{ marginTop: 14, width: "100%" }} disabled={!model} onClick={start}>
-                이 키로 시작
-              </button>
-            </>
+          <h2 id="login-title">로그인</h2>
+          <p className="auth-sub">사용할 AI의 API 키로 로그인합니다.</p>
+
+          {ready && mode && (
+            <div className="notice auth-resume">
+              진행 중인 작업이 있습니다.
+              <button type="button" className="btn" onClick={() => router.push("/system")}>이어서 하기</button>
+            </div>
           )}
-          {err && <div className="notice err" style={{ marginTop: 12 }}>{err}</div>}
-          <ul className="small muted keynote">
+
+          <form onSubmit={check}>
+            <label className="f" id="provider-label">AI 제공사</label>
+            <div className="auth-seg" role="radiogroup" aria-labelledby="provider-label">
+              {(["gemini", "claude"] as Provider[]).map((p) => (
+                <button key={p} type="button" role="radio" aria-checked={provider === p} className={provider === p ? "on" : ""} onClick={() => changeProvider(p)}>
+                  {PROVIDER_LABEL[p]}
+                </button>
+              ))}
+            </div>
+            <div className="auth-row">
+              <label className="f" htmlFor="key">API 키</label>
+              <a className="small" href={KEY_HELP[provider].url} target="_blank" rel="noreferrer">키 발급받기</a>
+            </div>
+            <input id="key" type="password" value={key} placeholder={KEY_HELP[provider].ph} autoComplete="off" spellCheck={false}
+              onChange={(e) => { setKey(e.target.value); setModels([]); setModel(""); }} />
+            {models.length === 0 ? (
+              <button className="btn primary lg auth-submit" disabled={busy || key.trim().length < 10}>
+                {busy ? "키 확인 중…" : "키 확인"}
+              </button>
+            ) : (
+              <>
+                <div className="auth-ok">키를 확인했습니다. 쓸 수 있는 모델 {models.length}개</div>
+                <label className="f" htmlFor="model">모델</label>
+                <select id="model" value={model} onChange={(e) => setModel(e.target.value)} style={{ width: "100%" }}>
+                  {models.map((m) => <option key={m} value={m}>{m}</option>)}
+                </select>
+                <button type="button" className="btn primary lg auth-submit" disabled={!model} onClick={start}>로그인</button>
+              </>
+            )}
+            {err && <div className="notice err" style={{ marginTop: 12 }}>{err}</div>}
+          </form>
+
+          <div className="auth-or"><span>또는</span></div>
+          <button type="button" className="btn lg auth-alt" onClick={showcase}>키 없이 체험하기</button>
+          <p className="auth-note">예시 사례 3개(자율주행 대회 차량, 무선 E-stop, 디지털 사이드미러)로 전체 과정을 따라갑니다.</p>
+
+          <ul className="auth-fine">
             <li>키는 이 브라우저 탭에만 저장되고, 탭을 닫으면 지워집니다.</li>
-            <li>키는 이 사이트의 서버로 보내지 않습니다. 브라우저에서 {PROVIDER_LABEL[provider]} API로 바로 요청합니다.</li>
-            <li>한 번 끝까지 분석하면 AI를 2번 호출합니다 (시스템 분석 1번 + 누락 탐지 1번).</li>
+            <li>키는 이 사이트 서버로 보내지 않고, 브라우저에서 {PROVIDER_LABEL[provider]} API로 바로 요청합니다.</li>
+            <li>분석 한 번에 AI를 2번 호출하며, 비용은 키 주인에게 청구됩니다.</li>
           </ul>
-        </form>
-        <div className="card">
-          <h2 style={{ fontSize: 17 }}>키 없이 체험</h2>
-          <p className="small muted" style={{ margin: "4px 0 12px" }}>
-            자율주행 대회 차량, 무선 E-stop, 디지털 사이드미러 3개 사례로 1~3단계 전체를 그대로 따라가 볼 수 있습니다. 분석 결과는 미리 검증해 둔 사례 데이터로 재현합니다.
-          </p>
-          <button className="btn lg" onClick={showcase}>키 없이 체험하기</button>
         </div>
-      </div>
+      </section>
     </main>
   );
 }
