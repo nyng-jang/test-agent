@@ -202,9 +202,9 @@ function SystemStep() {
 
           <section className="section">
             <h2>구성 블록 ({a.blocks.length})</h2>
-            <p className="desc">센서 → 처리 → 액추에이터 흐름으로 정리한 시스템 구조입니다. {live ? "이름을 고치거나 위치를 옮기고, 빠진 블록은 추가하세요. 시험 항목이 이 블록에 연결됩니다." : ""}</p>
+            <p className="desc">센서 → 처리 → 액추에이터 흐름으로 정리한 시스템 구조입니다. {live ? "블록 이름을 눌러 고치고, 블록을 끌어서 다른 칸으로 옮기세요. 빠진 블록은 각 칸의 “+ 추가”로 넣습니다." : ""}</p>
             {live ? (
-              <BlockEditor blocks={a.blocks} onChange={(blocks) => update({ analysis: { ...a, blocks } })} />
+              <BlockDiagramEditor blocks={a.blocks} onChange={(blocks) => update({ analysis: { ...a, blocks } })} />
             ) : (
               <BlockDiagram data={{ blocks: a.blocks, tests: [] }} plain />
             )}
@@ -228,42 +228,105 @@ function SystemStep() {
   );
 }
 
-const STAGE_OPTS: { id: Stage; label: string }[] = [
+const EDIT_STAGES: { id: Stage; label: string }[] = [
   { id: "sensor", label: "센서·입력" },
   { id: "process", label: "처리·통신" },
   { id: "actuator", label: "액추에이터·출력" },
   { id: "support", label: "공통 (전원·안전)" },
 ];
 
-/** 구성 블록 편집: 이름 고치기, 단계 옮기기, 삭제, 추가 */
-function BlockEditor({ blocks, onChange }: { blocks: Block[]; onChange: (b: Block[]) => void }) {
+/**
+ * 구조도 자체를 편집: 이름은 블록 안에서 바로 고치고,
+ * 블록은 끌어서(드래그) 다른 칸이나 다른 블록 앞으로 옮긴다.
+ * 터치·키보드는 ⠿ 를 눌러 집은 뒤 옮길 칸의 "여기로 옮기기"를 누른다.
+ */
+function BlockDiagramEditor({ blocks, onChange }: { blocks: Block[]; onChange: (b: Block[]) => void }) {
+  const [held, setHeld] = useState<string | null>(null); // 집은 블록(클릭 이동)
+  const [drag, setDrag] = useState<string | null>(null); // 끌고 있는 블록
+  const [over, setOver] = useState<string | null>(null); // 놓일 칸 또는 블록
+  const [fresh, setFresh] = useState<string | null>(null);
+  const moving = drag ?? held;
+
   const set = (id: string, patch: Partial<Block>) => onChange(blocks.map((b) => (b.id === id ? { ...b, ...patch } : b)));
+  const remove = (id: string) => { onChange(blocks.filter((b) => b.id !== id)); if (held === id) setHeld(null); };
   const add = (stage: Stage) => {
     let n = blocks.length + 1;
     while (blocks.some((b) => b.id === `u${n}`)) n++;
     onChange([...blocks, { id: `u${n}`, label: "", stage }]);
+    setFresh(`u${n}`);
   };
-  return (
-    <div className="card block-editor">
-      {STAGE_OPTS.map((st) => {
-        const list = blocks.filter((b) => b.stage === st.id);
-        return (
-          <div key={st.id} className={`be-col be-${st.id}`}>
-            <h4>{st.label} <span className="muted">{list.length}</span></h4>
-            {list.map((b) => (
-              <div key={b.id} className="be-row">
-                <input type="text" value={b.label} placeholder="블록 이름" aria-label={`${st.label} 블록 이름`}
-                  autoFocus={!b.label} onChange={(e) => set(b.id, { label: e.target.value })} />
-                <select value={b.stage} aria-label={`${b.label || "블록"} 위치`} onChange={(e) => set(b.id, { stage: e.target.value as Stage })}>
-                  {STAGE_OPTS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-                </select>
-                <button type="button" className="icon-btn" aria-label={`${b.label || "블록"} 삭제`} onClick={() => onChange(blocks.filter((x) => x.id !== b.id))}>×</button>
-              </div>
-            ))}
-            <button type="button" className="btn be-add" onClick={() => add(st.id)}>+ 추가</button>
-          </div>
-        );
-      })}
+  /** id 블록을 stage 칸의 before 블록 앞(없으면 맨 뒤)으로 */
+  const move = (id: string, stage: Stage, before?: string) => {
+    const b = blocks.find((x) => x.id === id);
+    if (!b || id === before) return;
+    const rest = blocks.filter((x) => x.id !== id);
+    const moved = { ...b, stage };
+    let at = before ? rest.findIndex((x) => x.id === before) : -1;
+    if (at < 0) { const last = rest.map((x) => x.stage).lastIndexOf(stage); at = last + 1 || rest.length; }
+    onChange([...rest.slice(0, at), moved, ...rest.slice(at)]);
+    setHeld(null); setDrag(null); setOver(null);
+  };
+
+  const dropProps = (stage: Stage, before?: string) => ({
+    onDragOver: (e: React.DragEvent) => { if (!drag) return; e.preventDefault(); e.stopPropagation(); setOver(before ?? stage); },
+    onDrop: (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); if (drag) move(drag, stage, before); },
+  });
+
+  const renderBlock = (b: Block) => (
+    <div key={b.id} className={`block eblock ${held === b.id ? "held" : ""} ${drag === b.id ? "dragging" : ""} ${over === b.id && drag !== b.id ? "drop-before" : ""}`}
+      draggable onDragStart={(e) => { setDrag(b.id); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", b.id); }}
+      onDragEnd={() => { setDrag(null); setOver(null); }} {...dropProps(b.stage, b.id)}>
+      <button type="button" className="grip" aria-label={held === b.id ? `${b.label || "블록"} 옮기기 취소` : `${b.label || "블록"} 옮기기`}
+        aria-pressed={held === b.id} title="끌어서 옮기기 (누르면 집기)" onClick={() => setHeld(held === b.id ? null : b.id)}>⠿</button>
+      <input type="text" value={b.label} placeholder="블록 이름" aria-label="블록 이름" autoFocus={fresh === b.id}
+        onChange={(e) => set(b.id, { label: e.target.value })} draggable={false}
+        onDragStart={(e) => e.preventDefault()} />
+      <button type="button" className="x" aria-label={`${b.label || "블록"} 삭제`} title="삭제" onClick={() => remove(b.id)}>×</button>
     </div>
+  );
+
+  const target = (stage: Stage) => moving && blocks.find((b) => b.id === moving)?.stage !== stage;
+  const tail = (stage: Stage) => (
+    <>
+      {held && target(stage) && (
+        <button type="button" className="move-here" onClick={() => move(held, stage)}>여기로 옮기기</button>
+      )}
+      <button type="button" className="add-block" onClick={() => add(stage)}>+ 추가</button>
+    </>
+  );
+  const colCls = (stage: Stage) => `${moving ? "drop-zone" : ""} ${over === stage ? "drop-over" : ""}`;
+  const support = blocks.filter((b) => b.stage === "support");
+
+  return (
+    <div className="card block-edit" onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOver(null); }}>
+      <div className="flow">
+        {EDIT_STAGES.slice(0, 3).map((st, i) => (
+          <FlowEditCol key={st.id} last={i === 2} title={st.label} cls={colCls(st.id)} drop={dropProps(st.id)}>
+            {blocks.filter((b) => b.stage === st.id).map(renderBlock)}
+            {tail(st.id)}
+          </FlowEditCol>
+        ))}
+      </div>
+      <div className={`support ${colCls("support")}`} {...dropProps("support")}>
+        <h4>공통 (전원·안전)</h4>
+        {support.map(renderBlock)}
+        {tail("support")}
+      </div>
+      <p className="small muted" style={{ margin: "10px 0 0" }}>
+        {held ? `“${blocks.find((b) => b.id === held)?.label || "블록"}”을(를) 옮길 칸의 “여기로 옮기기”를 누르세요.` : "⠿ 를 잡고 끌어서 옮깁니다. 터치 화면에서는 ⠿ 를 눌러 집은 뒤 옮길 칸을 고르세요."}
+      </p>
+    </div>
+  );
+}
+
+function FlowEditCol({ title, last, cls, drop, children }: { title: string; last: boolean; cls: string; drop: object; children: React.ReactNode }) {
+  return (
+    <>
+      <div className={`stage ${cls}`} {...drop}>
+        <h4>{title}</h4>
+        {children}
+      </div>
+      {!last && <div className="arrow" aria-hidden>→</div>}
+    </>
   );
 }

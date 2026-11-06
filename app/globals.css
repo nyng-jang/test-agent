@@ -593,14 +593,25 @@ footer { max-width: 1120px; line-height: 1.7; }
 }
 .keynote { margin: 14px 0 0; padding-left: 18px; }
 .keynote li { margin: 2px 0; }
-.block-editor { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-.be-col { background: var(--surface-2); border-radius: var(--radius); padding: 10px; display: flex; flex-direction: column; gap: 6px; }
-.be-col h4 { margin: 0 0 2px; font-size: 12px; color: var(--muted); font-weight: 700; }
-.be-support { border: 1px dashed var(--border); background: transparent; }
-.be-row { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px; }
-.be-row input { grid-column: 1; padding: 6px 8px; font-weight: 600; }
-.be-row select { grid-column: 1; font-size: 12px; padding: 3px 6px; }
-.be-row .icon-btn { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
-.be-add { align-self: flex-start; font-size: 12px; padding: 4px 10px; }
-@media (max-width: 960px) { .block-editor { grid-template-columns: 1fr 1fr; } }
-@media (max-width: 560px) { .block-editor { grid-template-columns: 1fr; } }
+/* 구조도 직접 편집 */
+.block-edit .eblock { display: flex; align-items: center; gap: 4px; padding: 4px 4px 4px 2px; cursor: grab; }
+.block-edit .eblock input { flex: 1; min-width: 0; border: 1px solid transparent; background: transparent; font-weight: 600; font-size: 14px; padding: 4px 6px; border-radius: 6px; color: var(--text); }
+.block-edit .eblock input:hover { border-color: var(--border); }
+.block-edit .eblock input:focus { border-color: var(--accent); background: var(--surface); outline: none; }
+.block-edit .eblock input::placeholder { color: var(--muted); font-weight: 400; }
+.block-edit .grip { border: 0; background: transparent; color: var(--muted); cursor: grab; padding: 2px 4px; font-size: 17px; border-radius: 4px; line-height: 1; }
+.block-edit .grip:hover, .block-edit .grip[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); }
+.block-edit .x { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 16px; padding: 0 6px; border-radius: 4px; opacity: 0; line-height: 1.4; }
+.block-edit .eblock:hover .x, .block-edit .x:focus-visible { opacity: 1; }
+.block-edit .x:hover { color: var(--gap); }
+@media (hover: none) { .block-edit .x { opacity: 1; } }
+.block-edit .eblock.held { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.block-edit .eblock.dragging { opacity: 0.4; }
+.block-edit .eblock.drop-before { box-shadow: 0 -3px 0 0 var(--accent); }
+.block-edit .stage, .block-edit .support { transition: background 0.12s, outline-color 0.12s; outline: 2px dashed transparent; outline-offset: -2px; }
+.block-edit .drop-zone { outline-color: var(--border); }
+.block-edit .drop-over { outline-color: var(--accent); background: var(--accent-soft); }
+.block-edit .add-block, .block-edit .move-here { border: 1px dashed var(--border); background: transparent; color: var(--muted); border-radius: 8px; padding: 6px 10px; font-size: 13px; cursor: pointer; text-align: left; }
+.block-edit .add-block:hover { color: var(--accent); border-color: var(--accent); }
+.block-edit .move-here { border-style: solid; border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.block-edit .support .eblock { flex: 0 1 210px; }
