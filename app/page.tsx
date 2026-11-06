@@ -51,6 +51,7 @@ export default function StartPage() {
   return (
     <main className="wrap login">
       <div className="hero">
+        <img src="/logo.png" alt="" className="hero-logo" width={64} height={64} />
         <h1>시험항목 누락 탐지 에이전트</h1>
         <p className="lead">
           시스템 설명과 내가 짠 시험 계획을 넣으면, 시험 항목을 환경·기능·통신·고장·오작동 다섯 갈래로 펼쳐 놓고 <b>계획에서 빠진 조건</b>을 알려줍니다. 시험을 대신 설계하는 도구가 아니라, 사람이 짠 계획의 빈틈을 잡는 보조 도구입니다.

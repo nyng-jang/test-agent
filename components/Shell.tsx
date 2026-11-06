@@ -35,7 +35,7 @@ export default function Shell({ step, children }: { step: 1 | 2 | 3; children: R
       <a href="#main" className="skip">본문으로 건너뛰기</a>
       <header className="topbar">
         <div className="wrap topbar-in">
-          <Link href="/" className="brand"><span className="brand-mark" aria-hidden="true">✓</span><span>시험항목 누락 탐지 에이전트</span></Link>
+          <Link href="/" className="brand"><img src="/logo.png" alt="" className="brand-logo" width={30} height={30} /><span>시험항목 누락 탐지 에이전트</span></Link>
           <nav className="steps" aria-label="단계">
             {steps.map((s) =>
               s.on ? (
