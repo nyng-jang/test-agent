@@ -715,3 +715,4 @@ footer { max-width: 1120px; line-height: 1.7; }
   .auth-panel { padding: 32px 16px 40px; max-width: 480px; width: 100%; margin: 0 auto; }
   .auth-showcase { display: none; }
 }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .topbar { background: rgba(23, 26, 32, 0.94); border-bottom-color: var(--border); } }
