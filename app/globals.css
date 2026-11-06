@@ -709,7 +709,5 @@ footer { max-width: 1120px; line-height: 1.7; }
 @media (max-width: 900px) {
   .auth-grid { grid-template-columns: 1fr; }
   .auth-panel { padding: 32px 16px 40px; max-width: 480px; width: 100%; margin: 0 auto; }
-  .auth-showcase { padding: 32px 16px 44px; overflow: hidden; }
-  .lp2 { transform: scale(0.56); margin-bottom: -145px; }
-  .auth-showcase h2 { margin-top: 24px; font-size: 18px; }
+  .auth-showcase { display: none; }
 }
