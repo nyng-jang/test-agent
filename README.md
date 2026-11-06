@@ -1,4 +1,4 @@
-<p align="center">
+<p align="left">
   <img src="public/logo.png" alt="TEST AGENT 로고" width="120" />
 </p>
 
