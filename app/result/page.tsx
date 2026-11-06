@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Shell, { useStepState } from "@/components/Shell";
+import { AppFrame } from "@/components/AppFrame";
 import {
   BlockDiagram, CoverageMatrix, DetailPanel, DetailProvider, GapCompare,
   SafetyTrace, StatusPill, TestDetailBody, TraceTable,
@@ -77,33 +78,13 @@ function ResultStep() {
 
   return (
     <DetailProvider value={setDetail}>
-      <div className="rs">
-        <aside className="rs-side" aria-label="결과 메뉴">
-          <div className="rs-target">
-            <div className="rs-k">분석 대상</div>
-            <div className="rs-name">{data.name}</div>
-            <div className="rs-meta">내 계획 {data.plan.length}개 · 제안 시험 {s.total}개</div>
-          </div>
-          <nav className="rs-nav">
-            {nav.map((n) => (
-              <button key={n.id} type="button" className={view === n.id ? "on" : ""} aria-current={view === n.id ? "page" : undefined} onClick={() => go(n.id)}>
-                <span>{n.label}</span>{n.n !== undefined && <em>{n.n}</em>}
-              </button>
-            ))}
-          </nav>
-          <div className="rs-side-foot">
-            <Link href="/system">분석 전제 고치기</Link>
-            <Link href="/plan">시험 계획 고치기</Link>
-            <button type="button" onClick={downloadJson}>결과 JSON 내려받기</button>
-          </div>
-        </aside>
-
-        <div className="rs-main">
-          <header className="rs-head">
-            <div className="rs-crumb">{data.name} <span>/</span> 분석 결과 <span>/</span> {title[view]}</div>
-            <h1>{title[view]}</h1>
-          </header>
-
+      <AppFrame
+        target={{ k: "분석 대상", name: data.name, meta: <>내 계획 {data.plan.length}개 · 제안 시험 {s.total}개</> }}
+        items={nav.map((n) => ({ ...n, on: view === n.id, onClick: () => go(n.id) }))}
+        links={[{ label: "분석 전제 고치기", href: "/system" }, { label: "시험 계획 고치기", href: "/plan" }, { label: "결과 JSON 내려받기", onClick: downloadJson }]}
+        crumb={[data.name, "분석 결과", title[view]]}
+        title={title[view]}
+      >
           {view === "gaps" && (
             <>
               <Dashboard data={data} s={s} />
@@ -130,8 +111,7 @@ function ResultStep() {
             </div>
           )}
           {view === "blocks" && <div className="rs-legacy"><BlockDiagram data={data} status={s.status} /></div>}
-        </div>
-      </div>
+      </AppFrame>
       <DetailPanel data={data} s={s} id={detail} onClose={closeDetail} />
     </DetailProvider>
   );

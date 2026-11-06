@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import Shell, { StepHead, useStepState } from "@/components/Shell";
+import Shell, { useStepState } from "@/components/Shell";
+import { AppFrame, useScrollSpy } from "@/components/AppFrame";
 import { BlockDiagram, HazardTable } from "@/components/sections";
 import { AiProgress } from "@/components/AiProgress";
 import type { QState } from "@/lib/premise";
@@ -24,7 +25,7 @@ const GUIDE = [
 const TEMPLATE = GUIDE.map((g) => `[${g.k}] `).join("\n");
 
 export default function SystemPage() {
-  return <Shell step={1}><SystemStep /></Shell>;
+  return <Shell step={1} wide><SystemStep /></Shell>;
 }
 
 function SystemStep() {
@@ -68,12 +69,28 @@ function SystemStep() {
   const setQs = (id: string, v: QState) => update({ qState: { ...flow.qState, [id]: v } });
   const answered = a?.questions.some((q) => qs(q.id) === "answer" && flow.answers[q.id]?.trim());
 
-  return (
-    <>
-      <StepHead n={1} title="시스템 입력"
-        desc="시험할 시스템을 설명하면 AI가 구성 블록, 요구사항, 위험(HARA)을 정리합니다. 시험 조건을 정하는 데 빠진 정보가 있으면 질문으로 알려줍니다." />
+  const done = !!a && !stale;
+  const hasPremise = done && (a!.questions.length > 0 || (a!.facts?.length ?? 0) > 0);
+  const secs = [
+    { id: "sec-input", label: "시스템 설명", show: true },
+    { id: "sec-summary", label: "분석 요약", show: done },
+    { id: "sec-premise", label: "분석 전제 확인", n: (a?.questions.length ?? 0) + (a?.facts?.length ?? 0), show: hasPremise },
+    { id: "sec-req", label: "요구사항", n: a?.requirements.length, show: done },
+    { id: "sec-blocks", label: "구성 블록", n: a?.blocks.length, show: done },
+    { id: "sec-hazard", label: "위험 분석", n: a?.hazards.length, show: done },
+  ];
+  const active = useScrollSpy(secs.filter((x) => x.show).map((x) => x.id));
 
-      <section className="section">
+  return (
+    <AppFrame
+      target={{ k: "1단계 · 시스템 입력", name: done ? a!.name : "새 시스템", meta: done ? <>구성 블록 {a!.blocks.length} · 요구사항 {a!.requirements.length} · 위험 {a!.hazards.length}</> : "아직 분석 전" }}
+      items={secs.map((x) => ({ id: x.id, label: x.label, n: x.show ? x.n : undefined, href: `#${x.id}`, on: x.show && active === x.id, off: !x.show }))}
+      links={done ? [{ label: "다음: 내 시험 계획 →", href: "/plan" }] : undefined}
+      crumb={[done ? a!.name : "새 시스템", "1단계", "시스템 입력"]}
+      title="시스템 입력"
+      desc="시험할 시스템을 설명하면 AI가 구성 블록, 요구사항, 위험(HARA)을 정리합니다. 시험 조건을 정하는 데 빠진 정보가 있으면 질문으로 알려줍니다."
+    >
+      <section className="section" id="sec-input">
         <div className="presets">
           <span className="small muted">예시 불러오기</span>
           {DEMO_CASES.map((c) => (
@@ -119,13 +136,13 @@ function SystemStep() {
 
       {a && !stale && (
         <>
-          <section className="section analysis-overview">
+          <section className="section analysis-overview" id="sec-summary">
             <h2>{a.name}</h2>
             <p className="desc">{a.summary}</p>
           </section>
 
           {(a.questions.length > 0 || (a.facts?.length ?? 0) > 0) && (
-            <section className="section">
+            <section className="section" id="sec-premise">
               <h2>분석 전제 확인</h2>
               <p className="desc">
                 설명만으로는 시험 조건을 정하기 어려운 정보입니다. 질문마다 <b>직접 답하기</b>, <b>AI 가정 사용</b>, <b>확인 필요</b>(팀에 물어봐야 함) 중 하나를 고르세요. 고른 상태는 결과 화면까지 표시되어, 어떤 시험이 가정에 기대는지 알 수 있습니다.
@@ -174,7 +191,7 @@ function SystemStep() {
             </section>
           )}
 
-          <section className="section">
+          <section className="section" id="sec-req">
             <h2>요구사항 ({a.requirements.length})</h2>
             <p className="desc">시험 항목의 근거가 됩니다. {live ? "AI가 정리한 내용이 맞는지 확인하고 고치거나 추가하세요." : ""}</p>
             <div className="card">
@@ -200,7 +217,7 @@ function SystemStep() {
             </div>
           </section>
 
-          <section className="section">
+          <section className="section" id="sec-blocks">
             <h2>구성 블록 ({a.blocks.length})</h2>
             <p className="desc">센서 → 처리 → 액추에이터 흐름으로 정리한 시스템 구조입니다. {live ? "블록 이름을 눌러 고치고, 블록을 끌어서 다른 칸으로 옮기세요. 빠진 블록은 각 칸의 “+ 추가”로 넣습니다." : ""}</p>
             {live ? (
@@ -210,7 +227,7 @@ function SystemStep() {
             )}
           </section>
 
-          <section className="section">
+          <section className="section" id="sec-hazard">
             <h2>위험 분석 (HARA 개념 적용)</h2>
             <p className="desc">위험마다 심각도(S)·노출(E)·제어 가능성(C)을 매겨 ASIL을 정하고 안전 목표로 이었습니다. 규격 준수가 아니라 개념을 적용해 본 것입니다.</p>
             <div className="card" style={{ padding: 0 }}><HazardTable a={a} /></div>
@@ -224,7 +241,7 @@ function SystemStep() {
           </div>
         </>
       )}
-    </>
+    </AppFrame>
   );
 }
 

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import Shell, { StepHead, useStepState } from "@/components/Shell";
+import Shell, { useStepState } from "@/components/Shell";
+import { AppFrame, useScrollSpy } from "@/components/AppFrame";
 import { flowPremises, gapKeyOf, useFlow } from "@/lib/flow";
 import { guessColumns, normalizePlanLine, readPlanFile, toLines, type Table } from "@/lib/planImport";
 import { AiProgress } from "@/components/AiProgress";
@@ -16,7 +17,7 @@ import { TabPanel, Tabs } from "@/components/Tabs";
 const bare = (l: string) => !/[(\[:→]|->|\d/.test(l);
 
 export default function PlanPage() {
-  return <Shell step={2}><PlanStep /></Shell>;
+  return <Shell step={2} wide><PlanStep /></Shell>;
 }
 
 function PlanStep() {
@@ -33,13 +34,14 @@ function PlanStep() {
   const showcase = mode === "showcase";
   const live = mode === "live" || showcase;
   const demoCase = flow.demoId ? demoById(flow.demoId) : undefined;
+  const active = useScrollSpy(analysisOk ? ["sec-guide", "sec-plan", "sec-run"] : []);
 
   if (!analysisOk)
     return (
-      <>
-        <StepHead n={2} title="내 시험 계획" desc="" />
+      <div className="rs-empty">
+        <h1>내 시험 계획</h1>
         <div className="notice">먼저 <Link href="/system">1단계 시스템 입력</Link>에서 분석을 마쳐 주세요.</div>
-      </>
+      </div>
     );
 
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
@@ -74,12 +76,28 @@ function PlanStep() {
 
   const unchanged = !!flow.gap && flow.gapKey === key;
 
+  const a = flow.analysis!;
   return (
-    <>
-      <StepHead n={2} title="내 시험 계획"
-        desc={<>지금까지 짠 시험 계획을 넣어 주세요. AI가 1단계 분석과 대조해 빠진 조건을 찾습니다. 시스템: <b>{flow.analysis?.name}</b></>} />
+    <AppFrame
+      target={{ k: "2단계 · 내 시험 계획", name: a.name, meta: <>구성 블록 {a.blocks.length} · 요구사항 {a.requirements.length} · 위험 {a.hazards.length}</> }}
+      items={[
+        { id: "sec-guide", label: "작성 예시", href: "#sec-guide", on: active === "sec-guide" },
+        { id: "sec-plan", label: "계획 입력", n: lines.length, href: "#sec-plan", on: active === "sec-plan" },
+        { id: "sec-run", label: "누락 탐지", href: "#sec-run", on: active === "sec-run" },
+      ]}
+      links={[{ label: "← 시스템 입력 고치기", href: "/system" }, ...(gapOk && unchanged ? [{ label: "결과 보기 →", href: "/result" }] : [])]}
+      crumb={[a.name, "2단계", "내 시험 계획"]}
+      title="내 시험 계획"
+      desc="지금까지 짠 시험 계획을 넣어 주세요. AI가 1단계 분석과 대조해 빠진 조건을 찾습니다."
+    >
+      <div className="rs-planstats" aria-label="계획 점검">
+        <div><span>계획 항목</span><b>{lines.length}</b></div>
+        <div><span>이름만 있는 항목</span><b className={bareCount ? "c-warn" : ""}>{bareCount}</b></div>
+        <div><span>확인 필요 정보</span><b className={reviewCount ? "c-warn" : ""}>{reviewCount}</b></div>
+        <div><span>대조할 분석</span><b className="rs-small">요구사항 {a.requirements.length} · 블록 {a.blocks.length}</b></div>
+      </div>
 
-      <details className="card guide plan-guide" open={live && lines.length === 0} style={{ marginTop: 12 }}>
+      <details id="sec-guide" className="card guide plan-guide" open={live && lines.length === 0}>
         <summary>작성 예시: 시험 항목 · 조건 · 판정 기준을 나눠 쓰면 비교가 정확해집니다</summary>
         <div className="tbl-wrap" style={{ marginTop: 10 }}>
           <table className="tbl" style={{ minWidth: 0 }}>
@@ -96,7 +114,7 @@ function PlanStep() {
         </p>
       </details>
 
-      <div style={{ marginTop: 14 }}>
+      <div id="sec-plan">
         <Tabs idPrefix="plan" label="계획 입력 방식" value={tab} onChange={(v) => setTab(v as "text" | "file" | "fields")}
           tabs={[{ id: "text", label: "자유 형식 (권장)" }, { id: "file", label: "파일 가져오기" }, { id: "fields", label: "항목별 직접 작성" }]} />
       </div>
@@ -135,6 +153,7 @@ function PlanStep() {
         </section>
       </TabPanel>
 
+      <div id="sec-run" />
       {busy && <AiProgress typical={showcase ? 10 : 60} steps={["분석 결과와 계획 읽는 중", "카테고리별 시험 항목 만드는 중", "조건·판정 기준 정리 중", "내 계획과 하나씩 대조 중", "우선순위 정리 중"]} />}
       {err && <div className="notice err">{err}</div>}
       <div className="actions">
@@ -148,7 +167,7 @@ function PlanStep() {
           </button>
         )}
       </div>
-    </>
+    </AppFrame>
   );
 }
 
