@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="public/logo.png" alt="TEST AGENT 로고" width="120" />
+</p>
+
 # TEST AGENT · Test Plan Analyzer
 
 시험항목 누락 탐지 에이전트 (v1)
