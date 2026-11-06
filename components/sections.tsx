@@ -536,13 +536,6 @@ export function DetailPanel({ data, s, id, onClose }: { data: CaseData; s: S; id
 
   const t = data.tests.find((x) => x.id === id);
   if (!id || !t) return null;
-  const st = s.status[t.id];
-  const reqs = t.reqs.map((r) => data.requirements.find((x) => x.id === r)).filter(Boolean) as CaseData["requirements"];
-  const sgs = t.sgs.map((g) => data.safetyGoals.find((x) => x.id === g)).filter(Boolean) as CaseData["safetyGoals"];
-  const blocks = t.blocks.map((b) => data.blocks.find((x) => x.id === b)).filter(Boolean) as CaseData["blocks"];
-  const plans = data.plan.filter((p) => p.covers[t.id]);
-  const prem = (t.assumes ?? []).map((pid) => data.premises?.find((p) => p.id === pid)).filter(Boolean) as Premise[];
-  const stageLabel = (x: string) => STAGES.find((st) => st.id === x)?.label ?? "공통";
 
   return (
     <div className="drawer-back" onClick={onClose}>
@@ -554,6 +547,23 @@ export function DetailPanel({ data, s, id, onClose }: { data: CaseData; s: S; id
           </div>
           <button ref={closeRef} className="icon-btn" onClick={onClose} aria-label="닫기">×</button>
         </div>
+        <TestDetailBody data={data} s={s} t={t} />
+      </div>
+    </div>
+  );
+}
+
+/** 시험 상세 내용 (드로어와 결과 화면의 오른쪽 상세 패널이 함께 씀) */
+export function TestDetailBody({ data, s, t }: { data: CaseData; s: S; t: TestItem }) {
+  const st = s.status[t.id];
+  const reqs = t.reqs.map((r) => data.requirements.find((x) => x.id === r)).filter(Boolean) as CaseData["requirements"];
+  const sgs = t.sgs.map((g) => data.safetyGoals.find((x) => x.id === g)).filter(Boolean) as CaseData["safetyGoals"];
+  const blocks = t.blocks.map((b) => data.blocks.find((x) => x.id === b)).filter(Boolean) as CaseData["blocks"];
+  const plans = data.plan.filter((p) => p.covers[t.id]);
+  const prem = (t.assumes ?? []).map((pid) => data.premises?.find((p) => p.id === pid)).filter(Boolean) as Premise[];
+  const stageLabel = (x: string) => STAGES.find((st) => st.id === x)?.label ?? "공통";
+  return (
+    <>
         <div className="drawer-badges">
           <PriorityBadge p={s.prio[t.id]} />
           <StatusPill st={st} />
@@ -614,7 +624,6 @@ export function DetailPanel({ data, s, id, onClose }: { data: CaseData; s: S; id
         </div>
 
         <p className="small muted" style={{ marginTop: 16 }}>AI가 만든 제안입니다. 조건과 판정 기준의 수치는 실제 사양에 맞게 검토한 뒤 계획에 넣으세요.</p>
-      </div>
-    </div>
+    </>
   );
 }

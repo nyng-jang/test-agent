@@ -13,7 +13,7 @@ export function useStepState() {
   return { analysisOk, gapOk };
 }
 
-export default function Shell({ step, children }: { step: 1 | 2 | 3; children: React.ReactNode }) {
+export default function Shell({ step, wide, children }: { step: 1 | 2 | 3; wide?: boolean; children: React.ReactNode }) {
   const { ready, mode, llm, logout } = useFlow();
   const { analysisOk, gapOk } = useStepState();
   const router = useRouter();
@@ -34,7 +34,7 @@ export default function Shell({ step, children }: { step: 1 | 2 | 3; children: R
     <>
       <a href="#main" className="skip">본문으로 건너뛰기</a>
       <header className="topbar">
-        <div className="wrap topbar-in">
+        <div className={`${wide ? "wrap-wide" : "wrap"} topbar-in`}>
           <Link href="/" className="brand"><img src="/logo.png" alt="" className="brand-logo" width={30} height={30} /><span className="brand-text"><b>TEST AGENT</b><small>Test Plan Analyzer</small></span></Link>
           <nav className="steps" aria-label="단계">
             {steps.map((s) =>
@@ -59,7 +59,7 @@ export default function Shell({ step, children }: { step: 1 | 2 | 3; children: R
           </div>
         </div>
       </header>
-      <main id="main" className="wrap"><div className="workflow-panel">{children}</div></main>
+      {wide ? <main id="main" className="app-wide">{children}</main> : <main id="main" className="wrap"><div className="workflow-panel">{children}</div></main>}
       <footer className="wrap">
         {mode === "showcase"
           ? <>키 없이 체험: 분석 결과는 미리 검증해 둔 3개 사례 데이터로 재현합니다. 다른 시스템을 분석하려면 첫 화면에서 내 API 키를 넣어 주세요. </>
