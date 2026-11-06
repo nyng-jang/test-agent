@@ -716,3 +716,7 @@ footer { max-width: 1120px; line-height: 1.7; }
   .auth-showcase { display: none; }
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .topbar { background: rgba(23, 26, 32, 0.94); border-bottom-color: var(--border); } }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) input[type="text"], :root:not([data-theme="light"]) input[type="password"], :root:not([data-theme="light"]) input[type="search"], :root:not([data-theme="light"]) textarea, :root:not([data-theme="light"]) select { background: var(--surface-2); border-color: var(--border); color: var(--text); }
+  :root:not([data-theme="light"]) .step.cur { background: var(--accent-soft); }
+}
