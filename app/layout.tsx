@@ -3,7 +3,7 @@ import { FlowProvider } from "@/lib/flow";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "시험항목 누락 탐지 에이전트",
+  title: "TEST AGENT · Test Plan Analyzer",
   description: "사람이 짠 시험 계획에서 빠진 시험 조건을 찾아주는 HW 평가·검증 보조 도구",
 };
 
