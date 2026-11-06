@@ -50,30 +50,20 @@ export default function StartPage() {
   };
 
   return (
-    <main className="auth">
-      <section className="auth-product" aria-labelledby="product-name">
-        <div className="auth-brand">
-          <span className="auth-logo"><img src="/logo.png" alt="" width={22} height={22} /></span>
-          <span>TEST AGENT</span>
-        </div>
-        <div className="auth-intro">
-          <h1 id="product-name">Test Plan Analyzer</h1>
-          <p>
-            시스템 설명과 직접 짠 시험 계획을 넣으면, 시험 항목을 환경·기능·통신·고장·오작동으로 나눠 펼치고
-            계획에서 빠졌거나 일부만 반영된 조건을 위험도 순으로 보여줍니다.
-          </p>
-        </div>
-        <LoginPreview />
-      </section>
+    <div className="auth">
+      <header className="auth-top">
+        <span className="auth-brand">
+          <img src="/logo.png" alt="" width={26} height={26} />
+          <span><b>TEST AGENT</b><small>Test Plan Analyzer</small></span>
+        </span>
+      </header>
 
-      <section className="auth-panel" aria-labelledby="login-title">
-        <div className="auth-box">
-          <div className="auth-brand auth-brand-m" aria-hidden>
-            <span className="auth-logo"><img src="/logo.png" alt="" width={22} height={22} /></span>
-            <span>TEST AGENT · Test Plan Analyzer</span>
-          </div>
-          <h2 id="login-title">로그인</h2>
-          <p className="auth-sub">사용할 AI의 API 키로 로그인합니다.</p>
+      <main className="auth-grid">
+        <section className="auth-panel" aria-labelledby="login-title">
+          <h1 id="login-title">로그인</h1>
+          <p className="auth-sub">
+            API 키가 없나요? <a href={KEY_HELP[provider].url} target="_blank" rel="noreferrer">{KEY_HELP[provider].label}에서 발급</a>
+          </p>
 
           {ready && mode && (
             <div className="notice auth-resume">
@@ -82,49 +72,50 @@ export default function StartPage() {
             </div>
           )}
 
-          <form onSubmit={check}>
-            <label className="f" id="provider-label">AI 제공사</label>
-            <div className="auth-seg" role="radiogroup" aria-labelledby="provider-label">
-              {(["gemini", "claude"] as Provider[]).map((p) => (
-                <button key={p} type="button" role="radio" aria-checked={provider === p} className={provider === p ? "on" : ""} onClick={() => changeProvider(p)}>
-                  {PROVIDER_LABEL[p]}
-                </button>
-              ))}
-            </div>
-            <div className="auth-row">
-              <label className="f" htmlFor="key">API 키</label>
-              <a className="small" href={KEY_HELP[provider].url} target="_blank" rel="noreferrer">키 발급받기</a>
-            </div>
+          <div className="auth-seg" role="radiogroup" aria-label="AI 제공사">
+            {(["gemini", "claude"] as Provider[]).map((p) => (
+              <button key={p} type="button" role="radio" aria-checked={provider === p} className={provider === p ? "on" : ""} onClick={() => { changeProvider(p); document.getElementById("key")?.focus(); }}>
+                {PROVIDER_LABEL[p]}로 로그인
+              </button>
+            ))}
+          </div>
+
+          <div className="auth-or"><span>또는, 키 없이 둘러보기</span></div>
+          <button type="button" className="auth-alt" onClick={showcase}>키 없이 체험하기</button>
+
+          <form onSubmit={check} className="auth-form">
+            <div className="auth-divider" />
+            <label className="f" htmlFor="key">{PROVIDER_LABEL[provider]} API 키</label>
             <input id="key" type="password" value={key} placeholder={KEY_HELP[provider].ph} autoComplete="off" spellCheck={false}
               onChange={(e) => { setKey(e.target.value); setModels([]); setModel(""); }} />
-            {models.length === 0 ? (
-              <button className="btn primary lg auth-submit" disabled={busy || key.trim().length < 10}>
-                {busy ? "키 확인 중…" : "키 확인"}
-              </button>
-            ) : (
+            {models.length > 0 && (
               <>
-                <div className="auth-ok">키를 확인했습니다. 쓸 수 있는 모델 {models.length}개</div>
                 <label className="f" htmlFor="model">모델</label>
-                <select id="model" value={model} onChange={(e) => setModel(e.target.value)} style={{ width: "100%" }}>
+                <select id="model" value={model} onChange={(e) => setModel(e.target.value)}>
                   {models.map((m) => <option key={m} value={m}>{m}</option>)}
                 </select>
-                <button type="button" className="btn primary lg auth-submit" disabled={!model} onClick={start}>로그인</button>
+                <div className="auth-ok">키를 확인했습니다. 쓸 수 있는 모델 {models.length}개</div>
               </>
             )}
+            <p className="auth-hint">키는 이 탭에만 저장되고 서버로 보내지 않습니다. 분석 한 번에 AI를 2번 호출하며 비용은 키 주인에게 청구됩니다.</p>
             {err && <div className="notice err" style={{ marginTop: 12 }}>{err}</div>}
+            {models.length === 0 ? (
+              <button className="auth-submit" disabled={busy || key.trim().length < 10}>{busy ? "키 확인 중…" : "키 확인"}</button>
+            ) : (
+              <button type="button" className="auth-submit" disabled={!model} onClick={start}>로그인</button>
+            )}
           </form>
+        </section>
 
-          <div className="auth-or"><span>또는</span></div>
-          <button type="button" className="btn lg auth-alt" onClick={showcase}>키 없이 체험하기</button>
-          <p className="auth-note">예시 사례 3개(자율주행 대회 차량, 무선 E-stop, 디지털 사이드미러)로 전체 과정을 따라갑니다.</p>
-
-          <ul className="auth-fine">
-            <li>키는 이 브라우저 탭에만 저장되고, 탭을 닫으면 지워집니다.</li>
-            <li>키는 이 사이트 서버로 보내지 않고, 브라우저에서 {PROVIDER_LABEL[provider]} API로 바로 요청합니다.</li>
-            <li>분석 한 번에 AI를 2번 호출하며, 비용은 키 주인에게 청구됩니다.</li>
-          </ul>
-        </div>
-      </section>
-    </main>
+        <section className="auth-showcase" aria-labelledby="showcase-title">
+          <LoginPreview />
+          <h2 id="showcase-title">야간 시험만 한 계획에서, 빠진 직사광선 시험을 찾습니다</h2>
+          <p>
+            시스템 설명을 넣으면 구성 블록·요구사항·위험을 정리하고, 내가 짠 시험 계획과 대조해
+            환경·기능·통신·고장·오작동 중 빠졌거나 일부만 반영된 시험을 위험도 순으로 보여줍니다.
+          </p>
+        </section>
+      </main>
+    </div>
   );
 }
