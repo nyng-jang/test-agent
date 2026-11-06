@@ -636,11 +636,11 @@ footer { max-width: 1120px; line-height: 1.7; }
 .auth-seg button { height: 48px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 15px; font-weight: 600; }
 .auth-seg button:hover { border-color: #8b98ad; }
 .auth-seg button.on { border: 2px solid var(--navy); color: var(--navy); background: #f3f6fb; }
-.auth-or { display: flex; align-items: center; gap: 10px; margin: 26px 0 18px; color: var(--muted); font-size: 12.5px; }
+.auth-or { display: flex; align-items: center; gap: 10px; margin: 30px 0 18px; color: var(--muted); font-size: 12.5px; }
 .auth-or::before, .auth-or::after { content: ""; flex: 1; height: 1px; background: var(--border); }
 .auth-alt { height: 48px; width: 100%; border-radius: 4px; border: 1px solid var(--border); background: #4b5563; color: #fff; font-size: 15px; font-weight: 600; border: 0; }
 .auth-alt:hover { background: #3b4452; }
-.auth-form { margin-top: 0; }
+.auth-form { margin-top: 4px; }
 .auth-divider { height: 1px; background: var(--border); margin: 30px 0 6px; }
 .auth-panel label.f { font-size: 14px; font-weight: 500; margin: 16px 0 8px; }
 .auth-panel input, .auth-panel select { width: 100%; height: 48px; border-radius: 4px !important; border: 1px solid #b9c1cc !important; background: var(--surface) !important; padding: 0 14px; font-size: 15px; }

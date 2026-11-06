@@ -80,11 +80,8 @@ export default function StartPage() {
             ))}
           </div>
 
-          <div className="auth-or"><span>또는, 키 없이 둘러보기</span></div>
-          <button type="button" className="auth-alt" onClick={showcase}>키 없이 체험하기</button>
 
           <form onSubmit={check} className="auth-form">
-            <div className="auth-divider" />
             <label className="f" htmlFor="key">{PROVIDER_LABEL[provider]} API 키</label>
             <input id="key" type="password" value={key} placeholder={KEY_HELP[provider].ph} autoComplete="off" spellCheck={false}
               onChange={(e) => { setKey(e.target.value); setModels([]); setModel(""); }} />
@@ -105,14 +102,19 @@ export default function StartPage() {
               <button type="button" className="auth-submit" disabled={!model} onClick={start}>로그인</button>
             )}
           </form>
+
+          <div className="auth-or"><span>또는, 키 없이 둘러보기</span></div>
+          <button type="button" className="auth-alt" onClick={showcase}>키 없이 체험하기</button>
+          <p className="auth-hint">예시 사례 3개(자율주행 대회 차량, 무선 E-stop, 디지털 사이드미러)로 전체 과정을 따라갑니다.</p>
         </section>
 
         <section className="auth-showcase" aria-labelledby="showcase-title">
           <LoginPreview />
-          <h2 id="showcase-title">야간 시험만 한 계획에서, 빠진 직사광선 시험을 찾습니다</h2>
+          <h2 id="showcase-title">시스템 분석부터 시험 계획 대조까지</h2>
           <p>
-            시스템 설명을 넣으면 구성 블록·요구사항·위험을 정리하고, 내가 짠 시험 계획과 대조해
-            환경·기능·통신·고장·오작동 중 빠졌거나 일부만 반영된 시험을 위험도 순으로 보여줍니다.
+            시스템 설명을 넣으면 구성 블록·요구사항·위험과 안전 목표를 정리하고, 필요한 시험 항목을
+            환경·기능·통신·고장·오작동으로 나눠 제안합니다. 내가 짠 시험 계획과 대조해 빠졌거나 일부만 반영된 시험을
+            위험도 순으로 보여주고, 요구사항과 시험의 연결을 표로 확인할 수 있습니다.
           </p>
         </section>
       </main>
