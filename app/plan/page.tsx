@@ -7,6 +7,9 @@ import Shell, { StepHead, useStepState } from "@/components/Shell";
 import { flowPremises, gapKeyOf, useFlow } from "@/lib/flow";
 import { guessColumns, normalizePlanLine, readPlanFile, toLines, type Table } from "@/lib/planImport";
 import { AiProgress } from "@/components/AiProgress";
+import { simulateGap } from "@/lib/showcase";
+import { gapLive } from "@/lib/ai";
+import { demoById, demoPlanLines } from "@/lib/demo";
 import { TabPanel, Tabs } from "@/components/Tabs";
 
 /** 조건이나 기준 없이 이름만 있는 줄: 괄호·숫자·화살표가 없는 짧은 줄 */
@@ -17,7 +20,7 @@ export default function PlanPage() {
 }
 
 function PlanStep() {
-  const { mode, flow, update, setRemaining } = useFlow();
+  const { mode, llm, flow, update } = useFlow();
   const { analysisOk, gapOk } = useStepState();
   const router = useRouter();
   const [tab, setTab] = useState<"text" | "file" | "fields">("text");
@@ -27,7 +30,9 @@ function PlanStep() {
   const [text, setText] = useState(flow.planLines.join("\n"));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const live = mode === "live";
+  const showcase = mode === "showcase";
+  const live = mode === "live" || showcase;
+  const demoCase = flow.demoId ? demoById(flow.demoId) : undefined;
 
   if (!analysisOk)
     return (
@@ -49,14 +54,16 @@ function PlanStep() {
     if (flow.gap && flow.gapKey === key) { router.push("/result"); return; }
     setBusy(true); setErr("");
     try {
-      const r = await fetch("/api/gap", {
-        method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ analysis: flow.analysis, plan: lines, premises }),
-      });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error || "누락 탐지에 실패했습니다.");
-      if (typeof j.remaining === "number") setRemaining(j.remaining);
-      update({ gap: j.gap, gapKey: key, planLines: lines });
+      if (showcase) {
+        const sim = await simulateGap(flow.demoId, flow.analysis, lines);
+        if (!sim.ok) throw new Error(sim.error);
+        update({ gap: sim.gap, gapKey: key, planLines: lines });
+        router.push("/result");
+        return;
+      }
+      if (!llm || !flow.analysis) throw new Error("API 키가 없습니다. 첫 화면에서 키를 다시 넣어 주세요.");
+      const gap = await gapLive(llm, flow.analysis, lines, premises);
+      update({ gap, gapKey: key, planLines: lines });
       router.push("/result");
     } catch (e: any) {
       setErr(e.message);
@@ -98,7 +105,10 @@ function PlanStep() {
         <section className="section">
           {tab === "text" ? (
             <div className="card plan-input-card">
-              <label className="f" htmlFor="plan" style={{ marginTop: 0 }}>시험 계획을 자유롭게 입력해 주세요</label>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <label className="f" htmlFor="plan" style={{ marginTop: 0, flex: 1 }}>시험 계획을 자유롭게 입력해 주세요</label>
+                {live && demoCase && <button type="button" className="btn" onClick={() => setLines(demoPlanLines(demoCase))}>예시 계획 불러오기</button>}
+              </div>
               <p className="small muted">시험 ID나 정해진 항목명이 없어도 됩니다. 내용을 항목·조건·판정 기준으로 정리하고 빠진 정보는 확인 필요로 표시합니다.</p>
               <textarea id="plan" value={text} readOnly={!live} style={{ minHeight: 220 }}
                 onChange={(e) => setText(e.target.value)}
@@ -125,7 +135,7 @@ function PlanStep() {
         </section>
       </TabPanel>
 
-      {busy && <AiProgress typical={70} steps={["분석 결과와 계획 읽는 중", "카테고리별 시험 항목 만드는 중", "조건·판정 기준 정리 중", "내 계획과 하나씩 대조 중", "우선순위 정리 중"]} />}
+      {busy && <AiProgress typical={showcase ? 10 : 60} steps={["분석 결과와 계획 읽는 중", "카테고리별 시험 항목 만드는 중", "조건·판정 기준 정리 중", "내 계획과 하나씩 대조 중", "우선순위 정리 중"]} />}
       {err && <div className="notice err">{err}</div>}
       <div className="actions">
         <Link className="btn" href="/system">← 시스템 입력</Link>

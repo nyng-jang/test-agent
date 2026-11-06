@@ -591,3 +591,5 @@ footer { max-width: 1120px; line-height: 1.7; }
   .workflow-panel .subtabs { flex-direction: column; }
   .workflow-panel .subtab { flex: none; text-align: left; }
 }
+.keynote { margin: 14px 0 0; padding-left: 18px; }
+.keynote li { margin: 2px 0; }

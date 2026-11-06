@@ -6,6 +6,9 @@ import Shell, { StepHead, useStepState } from "@/components/Shell";
 import { BlockDiagram, HazardTable } from "@/components/sections";
 import { AiProgress } from "@/components/AiProgress";
 import type { QState } from "@/lib/premise";
+import { simulateAnalyze } from "@/lib/showcase";
+import { analyzeLive } from "@/lib/ai";
+import { demoById } from "@/lib/demo";
 import { useFlow } from "@/lib/flow";
 import { DEMO_CASES } from "@/lib/demo";
 import type { Analysis, Fact } from "@/lib/types";
@@ -25,12 +28,13 @@ export default function SystemPage() {
 }
 
 function SystemStep() {
-  const { mode, flow, update, loadDemo, reset, setRemaining } = useFlow();
+  const { mode, llm, flow, update, fillDemo, reset } = useFlow();
+  const showcase = mode === "showcase";
   const { analysisOk } = useStepState();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const live = mode === "live";
+  const live = mode === "live" || showcase;
   const a = flow.analysis;
   const stale = !!a && flow.analyzedInput !== flow.systemInput;
 
@@ -41,15 +45,17 @@ function SystemStep() {
         ? a.questions.filter((q) => (flow.qState[q.id] ?? "assume") === "answer" && flow.answers[q.id]?.trim()).map((q) => ({ q: q.q, a: flow.answers[q.id].trim() }))
         : [];
       const facts = [...(withAnswers ? a?.facts ?? [] : []), ...newFacts];
-      const answers = facts;
-      const r = await fetch("/api/analyze", {
-        method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ systemInput: flow.systemInput, answers }),
-      });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error || "분석하지 못했습니다.");
-      if (typeof j.remaining === "number") setRemaining(j.remaining);
-      update({ analysis: { ...j.analysis, facts }, analyzedInput: flow.systemInput, answers: {}, qState: {}, demoId: null, gap: null, gapKey: null });
+      if (showcase) {
+        const sim = await simulateAnalyze(flow.systemInput, facts);
+        if (!sim.ok) throw new Error(sim.error);
+        update({ analysis: { ...sim.analysis, facts }, analyzedInput: flow.systemInput, answers: {}, qState: {}, demoId: sim.demoId, gap: null, gapKey: null });
+        return;
+      }
+      if (!llm) throw new Error("API 키가 없습니다. 첫 화면에서 키를 다시 넣어 주세요.");
+      const analysis = await analyzeLive(llm, flow.systemInput, facts);
+      const demo = flow.demoId ? demoById(flow.demoId) : undefined;
+      const keepDemo = demo && demo.systemInput.replace(/\s+/g, "") === flow.systemInput.replace(/\s+/g, "");
+      update({ analysis: { ...analysis, facts }, analyzedInput: flow.systemInput, answers: {}, qState: {}, demoId: keepDemo ? flow.demoId : null, gap: null, gapKey: null });
     } catch (e: any) {
       setErr(e.message);
     } finally {
@@ -71,7 +77,7 @@ function SystemStep() {
         <div className="presets">
           <span className="small muted">예시 불러오기</span>
           {DEMO_CASES.map((c) => (
-            <button key={c.id} className="btn" aria-pressed={flow.demoId === c.id} onClick={() => loadDemo(c.id)}>{c.tab}</button>
+            <button key={c.id} className="btn" aria-pressed={flow.demoId === c.id} onClick={() => fillDemo(c.id)}>{c.tab}</button>
           ))}
           {live && <button className="btn" aria-pressed={!flow.demoId && !flow.systemInput} onClick={reset}>새로 입력</button>}
         </div>
@@ -106,7 +112,7 @@ function SystemStep() {
               {!busy && stale && <span className="small muted">설명이 바뀌어 다시 분석해야 합니다.</span>}
             </div>
           )}
-          {busy && <div style={{ marginTop: 14 }}><AiProgress typical={40} steps={["시스템 설명 읽는 중", "구성 블록 정리 중", "요구사항 정리 중", "위험·안전 목표 분석 중", "빠진 정보 질문 만드는 중"]} /></div>}
+          {busy && <div style={{ marginTop: 14 }}><AiProgress typical={showcase ? 8 : 35} steps={["시스템 설명 읽는 중", "구성 블록 정리 중", "요구사항 정리 중", "위험·안전 목표 분석 중", "빠진 정보 질문 만드는 중"]} /></div>}
           {err && <div className="notice err" style={{ marginTop: 10 }}>{err}</div>}
         </div>
       </section>

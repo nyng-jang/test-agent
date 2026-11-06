@@ -4,8 +4,10 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { Analysis, GapResult, Premise } from "./types";
 import { premisesOf, type QState } from "./premise";
 import { demoAnalysis, demoById, demoGap, demoPlanLines } from "./demo";
+import type { LlmConfig } from "./llm";
 
-export type Mode = "live" | "guest" | null;
+/** live: 내 API 키로 실제 분석 · showcase: 키 없이 체험(사례 데이터로 재현) */
+export type Mode = "live" | "showcase" | null;
 
 export interface FlowState {
   demoId: string | null;          // 불러온 예시 사례 (직접 입력이면 null)
@@ -31,25 +33,24 @@ export const gapKeyOf = (a: Analysis | null, plan: string[], premises: Premise[]
     p: plan.map((x) => x.trim()).filter(Boolean), q: premises.map((x) => [x.id, x.kind, x.text]),
   });
 
-interface Session { liveEnabled: boolean; loggedIn: boolean; remaining: number }
-
 interface Ctx {
   ready: boolean;
   mode: Mode;
-  session: Session | null;
+  llm: LlmConfig | null;
   flow: FlowState;
   update: (patch: Partial<FlowState>) => void;
   loadDemo: (id: string) => void;
+  fillDemo: (id: string) => void;
   reset: () => void;
-  enterGuest: () => void;
-  refreshSession: () => Promise<Session | null>;
-  setRemaining: (n: number) => void;
-  logout: () => Promise<void>;
+  startLive: (cfg: LlmConfig) => void;
+  startShowcase: () => void;
+  logout: () => void;
 }
 
 const FlowCtx = createContext<Ctx | null>(null);
 const KEY = "tga-flow-v1";
-const MODE_KEY = "tga-guest";
+const MODE_KEY = "tga-mode";
+const LLM_KEY = "tga-llm"; // API 키: 이 탭의 sessionStorage에만 저장, 탭을 닫으면 사라짐
 
 const store = {
   get(k: string) { try { return sessionStorage.getItem(k); } catch { return null; } },
@@ -59,28 +60,21 @@ const store = {
 
 export function FlowProvider({ children }: { children: React.ReactNode }) {
   const [flow, setFlow] = useState<FlowState>(EMPTY);
-  const [session, setSession] = useState<Session | null>(null);
-  const [guest, setGuest] = useState(false);
+  const [mode, setMode] = useState<Mode>(null);
+  const [llm, setLlm] = useState<LlmConfig | null>(null);
   const [ready, setReady] = useState(false);
-
-  const refreshSession = useCallback(async () => {
-    try {
-      const s: Session = await fetch("/api/session", { cache: "no-store" }).then((r) => r.json());
-      setSession(s);
-      return s;
-    } catch {
-      const s = { liveEnabled: false, loggedIn: false, remaining: 0 };
-      setSession(s);
-      return s;
-    }
-  }, []);
 
   useEffect(() => {
     const raw = store.get(KEY);
     if (raw) try { setFlow({ ...EMPTY, ...JSON.parse(raw) }); } catch { /* 깨진 값 무시 */ }
-    setGuest(store.get(MODE_KEY) === "1");
-    refreshSession().finally(() => setReady(true));
-  }, [refreshSession]);
+    const m = store.get(MODE_KEY);
+    const cfgRaw = store.get(LLM_KEY);
+    let cfg: LlmConfig | null = null;
+    if (cfgRaw) try { cfg = JSON.parse(cfgRaw); } catch { /* 무시 */ }
+    if (m === "live" && cfg?.key) { setMode("live"); setLlm(cfg); }
+    else if (m === "showcase") setMode("showcase");
+    setReady(true);
+  }, []);
 
   useEffect(() => { if (ready) store.set(KEY, JSON.stringify(flow)); }, [flow, ready]);
 
@@ -97,21 +91,26 @@ export function FlowProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const reset = useCallback(() => setFlow(EMPTY), []);
-  const enterGuest = useCallback(() => { store.set(MODE_KEY, "1"); setGuest(true); }, []);
-  const setRemaining = useCallback((n: number) => setSession((s) => (s ? { ...s, remaining: n } : s)), []);
-  const logout = useCallback(async () => {
-    await fetch("/api/logout", { method: "POST" }).catch(() => {});
-    store.del(MODE_KEY); store.del(KEY);
-    setGuest(false); setFlow(EMPTY);
-    await refreshSession();
-  }, [refreshSession]);
+  /** 예시 시스템 설명만 채운다 (분석은 사용자가 버튼을 눌러 진행) */
+  const fillDemo = useCallback((id: string) => {
+    const c = demoById(id);
+    if (c) setFlow({ ...EMPTY, systemInput: c.systemInput, demoId: id });
+  }, []);
 
-  const mode: Mode = session?.loggedIn ? "live" : guest ? "guest" : null;
+  const reset = useCallback(() => setFlow(EMPTY), []);
+  const startLive = useCallback((cfg: LlmConfig) => {
+    store.set(MODE_KEY, "live"); store.set(LLM_KEY, JSON.stringify(cfg));
+    setLlm(cfg); setMode("live");
+  }, []);
+  const startShowcase = useCallback(() => { store.set(MODE_KEY, "showcase"); store.del(LLM_KEY); setLlm(null); setMode("showcase"); }, []);
+  const logout = useCallback(() => {
+    store.del(MODE_KEY); store.del(KEY); store.del(LLM_KEY);
+    setMode(null); setLlm(null); setFlow(EMPTY);
+  }, []);
 
   const value = useMemo(
-    () => ({ ready, mode, session, flow, update, loadDemo, reset, enterGuest, refreshSession, setRemaining, logout }),
-    [ready, mode, session, flow, update, loadDemo, reset, enterGuest, refreshSession, setRemaining, logout],
+    () => ({ ready, mode, llm, flow, update, loadDemo, fillDemo, reset, startLive, startShowcase, logout }),
+    [ready, mode, llm, flow, update, loadDemo, fillDemo, reset, startLive, startShowcase, logout],
   );
   return <FlowCtx.Provider value={value}>{children}</FlowCtx.Provider>;
 }
