@@ -108,18 +108,6 @@ npm run validate
 
 키 없이 체험하는 결과 화면 하단에도 사례별 검증 기준이 표시됩니다.
 
-## 로컬에서 실행하기
-
-```bash
-npm install
-npm run dev        # http://localhost:3000
-npm run validate   # 사례 데이터 검증
-npm run typecheck  # 타입 검사
-npm run build      # 프로덕션 빌드
-```
-
-환경 변수는 필요 없습니다. 로그인 화면에서 본인 API 키를 넣거나 **키 없이 체험하기**를 누르면 됩니다.
-
 ## 기술 및 배포
 
 | 영역 | 사용 기술 |
