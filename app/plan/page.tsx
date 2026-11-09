@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Shell, { useStepState } from "@/components/Shell";
 import { Term } from "@/components/Term";
+import { CompareDemo } from "@/components/CompareDemo";
 import { AppFrame, useScrollSpy } from "@/components/AppFrame";
 import { flowPremises, gapKeyOf, useFlow } from "@/lib/flow";
 import { guessColumns, normalizePlanLine, readPlanFile, toLines, type Table } from "@/lib/planImport";
@@ -86,11 +87,16 @@ function PlanStep() {
         { id: "sec-plan", label: "계획 입력", n: lines.length, href: "#sec-plan", on: active === "sec-plan" },
         { id: "sec-run", label: "누락 탐지", href: "#sec-run", on: active === "sec-run" },
       ]}
-      links={[{ label: "← 시스템 입력 고치기", href: "/system" }, ...(gapOk && unchanged ? [{ label: "결과 보기 →", href: "/result" }] : [])]}
+      links={[{ label: "← 시스템 설명 고치기", href: "/system" }, ...(gapOk && unchanged ? [{ label: "결과 보기 →", href: "/result" }] : [])]}
       crumb={[a.name, "2단계", "내 시험 계획"]}
       title="내 시험 계획"
       desc="지금까지 짠 시험 계획을 넣어 주세요. AI가 1단계 분석과 대조해 빠진 조건을 찾습니다."
     >
+      <section className="plan-how" aria-labelledby="plan-how-title">
+        <h2 id="plan-how-title">무엇을 비교하나요?</h2>
+        <p className="desc">1단계에서 정리한 시스템 분석 결과로 AI가 필요한 시험을 제안하고, 여기 넣은 내 시험 계획과 하나씩 이어 봅니다. 시험 ID는 없어도 됩니다.</p>
+        <CompareDemo />
+      </section>
       <div className="rs-planstats" aria-label="계획 점검">
         <div><span>계획 항목</span><b>{lines.length}</b></div>
         <div><span>이름만 있는 항목</span><b className={bareCount ? "c-warn" : ""}>{bareCount}</b></div>

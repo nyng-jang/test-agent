@@ -5,6 +5,8 @@ import { useState } from "react";
 import Shell, { useStepState } from "@/components/Shell";
 import { AppFrame } from "@/components/AppFrame";
 import { ICON } from "@/lib/icons";
+import { BlockEditDemo } from "@/components/BlockEditDemo";
+import { PremiseDemo } from "@/components/PremiseDemo";
 import { BlockDiagram, HazardTable } from "@/components/sections";
 import { AiProgress } from "@/components/AiProgress";
 import { Term } from "@/components/Term";
@@ -154,6 +156,7 @@ function SystemStep() {
           <section className="section wz-panel" id="sec-blocks" hidden={curId !== "sec-blocks"}>
             <PanelHead icon={ICON.blocks} title={`구성 블록 (${a.blocks.length})`}>시스템이 어떤 부품으로 이뤄지고 신호가 어떻게 흐르는지(센서 → 처리 → 액추에이터) 정리했습니다. {live ? "블록 이름을 눌러 고치고, ⠿를 끌어 다른 칸으로 옮기세요. 빠진 블록은 각 칸의 “+ 추가”로 넣습니다." : ""}</PanelHead>
             <AiNote />
+            {live && <BlockEditDemo />}
             {live ? (
               <BlockDiagramEditor blocks={a.blocks} onChange={(blocks) => update({ analysis: { ...a, blocks } })} />
             ) : (
@@ -193,6 +196,7 @@ function SystemStep() {
                 시스템 설명만으로는 알기 어려워 AI가 추가로 확인하고 싶은 정보입니다. 질문마다 <b>직접 답하기</b>, <b>AI 가정 사용</b>(AI가 임시로 정한 값으로 진행), <b>확인 필요</b>(팀에 물어봐야 함) 중 하나를 고르세요. 고른 상태는 이름표로 결과 화면까지 따라갑니다.
               </PanelHead>
               <AiNote />
+              <PremiseDemo />
               <div className="card">
                 {(a.facts ?? []).map((f, i) => (
                   <div key={`f${i}`} className="q">

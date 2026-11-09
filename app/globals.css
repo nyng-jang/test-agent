@@ -1059,3 +1059,141 @@ footer { max-width: 1120px; line-height: 1.7; }
 .rs-work { scroll-margin-top: 90px; }
 @media (max-width: 900px) { .rh { padding: 20px 16px; } .rh-grid { grid-template-columns: 1fr; } .rh-head h2 { font-size: 21px; } .rh-check { width: 44px; height: 44px; } }
 .who a.btn { text-decoration: none; }
+
+/* 구성 블록 편집 안내 애니메이션 (components/BlockEditDemo.tsx) */
+.bd { margin: 0 0 14px; padding: 14px 16px 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.bd svg { display: block; width: 100%; max-width: 560px; height: auto; margin: 0 auto; overflow: visible; }
+.bd-col { fill: var(--surface-2); }
+.bd-colt { font-size: 10.5px; font-weight: 700; fill: var(--muted); }
+.bd-arrow { stroke: var(--muted); stroke-width: 1.5; fill: none; opacity: .6; }
+.bd-block { fill: var(--surface); stroke: var(--border); stroke-width: 1.2; }
+.bd-grip { font-size: 10px; fill: var(--muted); }
+.bd-label { font-size: 11.5px; font-weight: 600; fill: var(--text); }
+.bd-drop { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 4 3; opacity: 0; }
+.bd-addbox { fill: transparent; stroke: var(--border); stroke-dasharray: 4 3; }
+.bd-addt { font-size: 11px; fill: var(--muted); }
+.bd-arrowcur { fill: #0f172a; stroke: #fff; stroke-width: 1.2; }
+.bd-click { fill: var(--accent); opacity: 0; }
+.bd-newname { opacity: 0; }
+.bd-caret { fill: var(--accent); opacity: 0; }
+.bd-new { opacity: 0; }
+.bd-cap { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+.bd-cap span { padding: 3px 10px; border-radius: 999px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .bd-scene { animation: bd-scene 10s infinite; }
+  .bd-cursor { animation: bd-cursor 10s infinite; }
+  .bd-click { animation: bd-click 10s infinite; transform-box: fill-box; transform-origin: center; }
+  .bd-drag { animation: bd-drag 10s infinite; }
+  .bd-drag .bd-block { animation: bd-lift 10s infinite; }
+  .bd-drop { animation: bd-drop 10s infinite; }
+  .bd-new { animation: bd-new 10s infinite; }
+  .bd-add { animation: bd-add 10s infinite; }
+  .bd-old { animation: bd-old 10s infinite; }
+  .bd-newname { animation: bd-newname 10s infinite; }
+  .bd-caret { animation: bd-caret 10s infinite; }
+  .bd-edit { animation: bd-edit 10s infinite; }
+  .bd-s1 { animation: bd-s1 10s infinite; }
+  .bd-s2 { animation: bd-s2 10s infinite; }
+  .bd-s3 { animation: bd-s3 10s infinite; }
+}
+@keyframes bd-scene { 0%, 94% { opacity: 1; } 97% { opacity: 0; } 100% { opacity: 1; } }
+/* 커서 경로: 카메라 → 처리 칸 → + 추가 → 버튼 이름 */
+@keyframes bd-cursor {
+  0%, 6% { transform: translate(140px, 52px); }
+  28%, 34% { transform: translate(324px, 120px); }
+  42%, 52% { transform: translate(430px, 86px); }
+  64%, 100% { transform: translate(70px, 86px); }
+}
+@keyframes bd-click {
+  0%, 4% { opacity: 0; transform: scale(.3); } 6% { opacity: .35; transform: scale(1); } 9% { opacity: 0; transform: scale(1.6); }
+  44%, 45% { opacity: 0; transform: scale(.3); } 47% { opacity: .35; transform: scale(1); } 50% { opacity: 0; transform: scale(1.6); }
+  66%, 67% { opacity: 0; transform: scale(.3); } 69% { opacity: .35; transform: scale(1); } 72%, 100% { opacity: 0; transform: scale(1.6); }
+}
+@keyframes bd-drag { 0%, 6% { transform: translate(0, 0); } 28%, 100% { transform: translate(184px, 68px); } }
+@keyframes bd-lift { 0%, 5% { stroke: var(--border); filter: none; } 8%, 26% { stroke: var(--accent); filter: drop-shadow(0 4px 6px rgba(15, 23, 42, .18)); } 30%, 100% { stroke: var(--border); filter: none; } }
+@keyframes bd-drop { 0%, 8% { opacity: 0; } 12%, 26% { opacity: 1; } 29%, 100% { opacity: 0; } }
+@keyframes bd-new { 0%, 47% { opacity: 0; } 52%, 100% { opacity: 1; } }
+@keyframes bd-add { 0%, 47% { transform: translate(0, 0); } 52%, 100% { transform: translate(0, 34px); } }
+@keyframes bd-old { 0%, 69% { opacity: 1; } 71%, 100% { opacity: 0; } }
+@keyframes bd-newname { 0%, 71% { opacity: 0; clip-path: inset(0 100% 0 0); } 72% { opacity: 1; clip-path: inset(0 100% 0 0); } 84%, 100% { opacity: 1; clip-path: inset(0 0 0 0); } }
+@keyframes bd-caret { 0%, 69% { opacity: 0; transform: translateX(0); } 71% { opacity: 1; transform: translateX(0); } 84% { opacity: 1; transform: translateX(112px); } 88%, 100% { opacity: 0; transform: translateX(112px); } }
+@keyframes bd-edit { 0%, 68% { stroke: var(--border); } 70%, 88% { stroke: var(--accent); stroke-width: 2; } 92%, 100% { stroke: var(--border); } }
+@keyframes bd-s1 { 0%, 32% { background: var(--accent-soft); color: var(--accent); font-weight: 700; } 34%, 100% { background: transparent; color: var(--muted); font-weight: 400; } }
+@keyframes bd-s2 { 0%, 34% { background: transparent; color: var(--muted); font-weight: 400; } 36%, 60% { background: var(--accent-soft); color: var(--accent); font-weight: 700; } 62%, 100% { background: transparent; color: var(--muted); font-weight: 400; } }
+@keyframes bd-s3 { 0%, 62% { background: transparent; color: var(--muted); font-weight: 400; } 64%, 96% { background: var(--accent-soft); color: var(--accent); font-weight: 700; } 98%, 100% { background: transparent; color: var(--muted); font-weight: 400; } }
+@media (prefers-reduced-motion: reduce) { .bd-new { opacity: 1; } .bd-add { transform: translate(0, 34px); } }
+
+/* 분석 전제 안내 애니메이션 */
+.pd-btn { fill: var(--surface); stroke: var(--border); stroke-width: 1.2; }
+.pd-bt { font-size: 10.5px; font-weight: 600; fill: var(--text); }
+.pd-box { fill: var(--surface); stroke: var(--border); stroke-dasharray: 4 3; }
+.pd-small { font-size: 10.5px; fill: var(--text); }
+.pd-input { stroke: var(--accent); }
+.pd-tag { stroke-width: 1.2; }
+.pd-tag.ai { fill: transparent; stroke: var(--assume, #6d4fd6); stroke-dasharray: 3 2; }
+.pd-tag.fact { fill: transparent; stroke: var(--fact, #1d7a46); }
+.pd-tt { font-size: 10.5px; font-weight: 700; }
+.pd-tt.ai { fill: var(--assume, #6d4fd6); } .pd-tt.fact { fill: var(--fact, #1d7a46); }
+.pd-link { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-dasharray: 260; stroke-dashoffset: 260; opacity: 0; }
+.pd-assume, .pd-answer, .pd-tag-ai, .pd-tag-fact, .pd-rtag-ai, .pd-rtag-fact { opacity: 0; }
+.cd-tag, .cd-line, .cd-why { opacity: 0; }
+.cd-aibox { fill: var(--accent); }
+.cd-ait { font-size: 11px; font-weight: 700; fill: #fff; }
+.cd-line { stroke-width: 2; fill: none; }
+.cd-line.ok { stroke: var(--ok); } .cd-line.part { stroke: var(--warn); stroke-dasharray: 5 4; }
+.cd-tagbox.ok { fill: var(--ok-bg); } .cd-tagbox.part { fill: var(--warn-bg); } .cd-tagbox.gap { fill: var(--gap-bg); }
+.cd-tagt { font-size: 10.5px; font-weight: 700; }
+.cd-tagt.ok { fill: var(--ok); } .cd-tagt.part { fill: var(--warn); } .cd-tagt.gap { fill: var(--gap); }
+.cd-why { font-size: 10px; fill: var(--gap); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .pd-cursor { animation: pd-cursor 10s infinite; }
+  .pd-click { animation: pd-click 10s infinite; }
+  .pd-b2 .pd-btn { animation: pd-b2 10s infinite; }
+  .pd-b1 .pd-btn { animation: pd-b1 10s infinite; }
+  .pd-assume { animation: pd-assume 10s infinite; }
+  .pd-answer { animation: pd-answer 10s infinite; }
+  .pd-typed { animation: pd-typed 10s infinite; }
+  .pd-tag-ai { animation: pd-tag-ai 10s infinite; }
+  .pd-tag-fact { animation: pd-tag-fact 10s infinite; }
+  .pd-link { animation: pd-link 10s infinite; }
+  .pd-rtag-ai { animation: pd-rtag-ai 10s infinite; }
+  .pd-rtag-fact { animation: pd-rtag-fact 10s infinite; }
+  .pd-s1 { animation: bd-s1 10s infinite; }
+  .pd-s2 { animation: pd-s2 10s infinite; }
+  .pd-s3 { animation: bd-s3 10s infinite; }
+  .cd-ai { animation: cd-ai 10s infinite; transform-box: fill-box; transform-origin: center; }
+  .cd-line.ok, .cd-tag-ok { animation: cd-ok 10s infinite; }
+  .cd-line.part, .cd-tag-part { animation: cd-part 10s infinite; }
+  .cd-tag-gap, .cd-why { animation: cd-gap 10s infinite; }
+  .cd-c3 .cd-chip { animation: cd-c3 10s infinite; }
+  .cd-s1 { animation: bd-s1 10s infinite; }
+  .cd-s2 { animation: cd-s2 10s infinite; }
+  .cd-s3 { animation: bd-s3 10s infinite; }
+}
+@keyframes pd-cursor { 0% { transform: translate(250px, 150px); } 10%, 40% { transform: translate(150px, 68px); } 46%, 100% { transform: translate(60px, 68px); } }
+@keyframes pd-click { 0%, 10% { opacity: 0; transform: scale(.3); } 12% { opacity: .35; transform: scale(1); } 15%, 44% { opacity: 0; transform: scale(1.6); } 45% { opacity: 0; transform: scale(.3); } 47% { opacity: .35; transform: scale(1); } 50%, 100% { opacity: 0; transform: scale(1.6); } }
+@keyframes pd-b2 { 0%, 11% { fill: var(--surface); stroke: var(--border); } 13%, 45% { fill: var(--accent-soft); stroke: var(--accent); } 47%, 100% { fill: var(--surface); stroke: var(--border); } }
+@keyframes pd-b1 { 0%, 46% { fill: var(--surface); stroke: var(--border); } 48%, 100% { fill: var(--accent-soft); stroke: var(--accent); } }
+@keyframes pd-assume { 0%, 13% { opacity: 0; } 16%, 46% { opacity: 1; } 48%, 100% { opacity: 0; } }
+@keyframes pd-answer { 0%, 47% { opacity: 0; } 49%, 100% { opacity: 1; } }
+@keyframes pd-typed { 0%, 49% { clip-path: inset(0 100% 0 0); } 62%, 100% { clip-path: inset(0 0 0 0); } }
+@keyframes pd-tag-ai { 0%, 15% { opacity: 0; } 18%, 62% { opacity: 1; } 64%, 100% { opacity: 0; } }
+@keyframes pd-tag-fact { 0%, 63% { opacity: 0; } 66%, 100% { opacity: 1; } }
+@keyframes pd-link { 0%, 20% { opacity: 0; stroke-dashoffset: 260; } 22% { opacity: 1; stroke-dashoffset: 260; } 30% { opacity: 1; stroke-dashoffset: 0; } 36%, 66% { opacity: 0; stroke-dashoffset: 0; } 67% { opacity: 1; stroke-dashoffset: 260; } 75% { opacity: 1; stroke-dashoffset: 0; } 81%, 100% { opacity: 0; stroke-dashoffset: 0; } }
+@keyframes pd-rtag-ai { 0%, 28% { opacity: 0; } 31%, 72% { opacity: 1; } 74%, 100% { opacity: 0; } }
+@keyframes pd-rtag-fact { 0%, 73% { opacity: 0; } 76%, 100% { opacity: 1; } }
+@keyframes pd-s2 { 0%, 18% { background: transparent; color: var(--muted); font-weight: 400; } 20%, 44% { background: var(--accent-soft); color: var(--accent); font-weight: 700; } 46%, 100% { background: transparent; color: var(--muted); font-weight: 400; } }
+@keyframes cd-ai { 0%, 8% { transform: scale(1); } 12% { transform: scale(1.12); } 16% { transform: scale(1); } 20% { transform: scale(1.12); } 24%, 100% { transform: scale(1); } }
+@keyframes cd-ok { 0%, 26% { opacity: 0; } 30%, 100% { opacity: 1; } }
+@keyframes cd-part { 0%, 44% { opacity: 0; } 48%, 100% { opacity: 1; } }
+@keyframes cd-gap { 0%, 62% { opacity: 0; } 66%, 100% { opacity: 1; } }
+@keyframes cd-c3 { 0%, 62% { stroke: var(--border); } 66%, 100% { stroke: var(--gap); stroke-width: 2; } }
+@keyframes cd-s2 { 0%, 42% { background: transparent; color: var(--muted); font-weight: 400; } 44%, 60% { background: var(--accent-soft); color: var(--accent); font-weight: 700; } 62%, 100% { background: transparent; color: var(--muted); font-weight: 400; } }
+@media (prefers-reduced-motion: reduce) {
+  .pd-answer, .pd-tag-fact, .pd-rtag-fact, .cd-tag, .cd-line, .cd-why { opacity: 1; }
+}
+.plan-how { margin-bottom: 16px; }
+.plan-how h2 { font-size: 18px; margin: 0; }
+.plan-how .desc { margin: 4px 0 10px; }
