@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-export type SideItem = { id: string; label: string; n?: number | string; href?: string; onClick?: () => void; on?: boolean; off?: boolean };
+export type SideItem = { id: string; label: string; n?: number | string; href?: string; onClick?: () => void; on?: boolean; off?: boolean; icon?: React.ReactNode; sub?: string; done?: boolean };
 export type SideLink = { label: string; href?: string; onClick?: () => void };
 
 /**
@@ -29,8 +29,10 @@ export function AppFrame({ target, items, links, crumb, title, desc, children }:
         </div>
         <nav className="rs-nav">
           {items.map((n) => {
-            const inner = <><span>{n.label}</span>{n.n !== undefined && <em>{n.n}</em>}</>;
-            const cls = `${n.on ? "on" : ""} ${n.off ? "off" : ""}`;
+            const inner = n.icon ? (
+              <><span className={`rs-ic ${n.done ? "done" : ""}`} aria-hidden>{n.icon}</span><span className="rs-lab">{n.label}{n.sub && <small>{n.sub}</small>}</span>{n.n !== undefined && <em>{n.n}</em>}</>
+            ) : <><span>{n.label}</span>{n.n !== undefined && <em>{n.n}</em>}</>;
+            const cls = `${n.on ? "on" : ""} ${n.off ? "off" : ""} ${n.icon ? "with-ic" : ""}`;
             return n.href ? (
               <a key={n.id} href={n.href} className={cls} aria-current={n.on ? "location" : undefined}
                 onClick={(e) => { if (n.off) { e.preventDefault(); return; } n.onClick?.(); }} aria-disabled={n.off || undefined}>{inner}</a>
@@ -51,7 +53,7 @@ export function AppFrame({ target, items, links, crumb, title, desc, children }:
       <div className="rs-main">
         <header className="rs-head">
           <div className="rs-crumb">{crumb.map((c, i) => <span key={i}>{i > 0 && <span className="sep">/</span>}{c}</span>)}</div>
-          <h1>{title}</h1>
+          {title && <h1>{title}</h1>}
           {desc && <p className="rs-desc">{desc}</p>}
         </header>
         {children}

@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Shell, { useStepState } from "@/components/Shell";
-import { AppFrame, useScrollSpy } from "@/components/AppFrame";
+import { AppFrame } from "@/components/AppFrame";
+import { ICON } from "@/lib/icons";
 import { BlockDiagram, HazardTable } from "@/components/sections";
 import { AiProgress } from "@/components/AiProgress";
 import { Term } from "@/components/Term";
@@ -36,6 +37,7 @@ function SystemStep() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [cur, setCur] = useState(() => (flow.analysis && flow.analyzedInput === flow.systemInput ? "sec-blocks" : "sec-input"));
   const live = mode === "live" || showcase;
   const a = flow.analysis;
   const stale = !!a && flow.analyzedInput !== flow.systemInput;
@@ -51,6 +53,7 @@ function SystemStep() {
         const sim = await simulateAnalyze(flow.systemInput, facts);
         if (!sim.ok) throw new Error(sim.error);
         update({ analysis: { ...sim.analysis, facts }, analyzedInput: flow.systemInput, answers: {}, qState: {}, demoId: sim.demoId, gap: null, gapKey: null });
+        if (!withAnswers) setCur("sec-blocks");
         return;
       }
       if (!llm) throw new Error("API 키가 없습니다. 첫 화면에서 키를 다시 넣어 주세요.");
@@ -58,6 +61,7 @@ function SystemStep() {
       const demo = flow.demoId ? demoById(flow.demoId) : undefined;
       const keepDemo = demo && demo.systemInput.replace(/\s+/g, "") === flow.systemInput.replace(/\s+/g, "");
       update({ analysis: { ...analysis, facts }, analyzedInput: flow.systemInput, answers: {}, qState: {}, demoId: keepDemo ? flow.demoId : null, gap: null, gapKey: null });
+      if (!withAnswers) setCur("sec-blocks");
     } catch (e: any) {
       setErr(e.message);
     } finally {
@@ -73,25 +77,30 @@ function SystemStep() {
   const done = !!a && !stale;
   const hasPremise = done && (a!.questions.length > 0 || (a!.facts?.length ?? 0) > 0);
   const secs = [
-    { id: "sec-input", label: "시스템 설명", show: true },
-    { id: "sec-summary", label: "분석 요약", show: done },
-    { id: "sec-blocks", label: "구성 블록", n: a?.blocks.length, show: done },
-    { id: "sec-req", label: "요구사항", n: a?.requirements.length, show: done },
-    { id: "sec-premise", label: "분석 전제 확인", n: (a?.questions.length ?? 0) + (a?.facts?.length ?? 0), show: hasPremise },
-    { id: "sec-hazard", label: "위험 분석", n: a?.hazards.length, show: done },
+    { id: "sec-input", label: "시스템 설명", sub: "필수", icon: ICON.doc, show: true },
+    { id: "sec-blocks", label: "구성 블록", sub: "필수", icon: ICON.blocks, n: a?.blocks.length, show: done },
+    { id: "sec-req", label: "요구사항", sub: "필수", icon: ICON.req, n: a?.requirements.length, show: done },
+    { id: "sec-premise", label: "분석 전제", sub: "선택", icon: ICON.premise, n: (a?.questions.length ?? 0) + (a?.facts?.length ?? 0), show: hasPremise },
+    { id: "sec-hazard", label: "위험 분석", sub: "필수", icon: ICON.hazard, n: a?.hazards.length, show: done },
   ];
-  const active = useScrollSpy(secs.filter((x) => x.show).map((x) => x.id));
+  const shown = secs.filter((x) => x.show);
+  const curId = shown.some((x) => x.id === cur) ? cur : "sec-input";
+  const curIdx = shown.findIndex((x) => x.id === curId);
+  const go = (id: string) => { setCur(id); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const prev = curIdx > 0 ? shown[curIdx - 1] : null;
+  const next = curIdx < shown.length - 1 ? shown[curIdx + 1] : null;
+  const canLeave = !!a && !a.requirements.some((r) => !r.text.trim()) && !a.blocks.some((b) => !b.label.trim());
 
   return (
     <AppFrame
-      target={{ k: "1단계 · 시스템 입력", name: done ? a!.name : "새 시스템", meta: done ? <>구성 블록 {a!.blocks.length} · 요구사항 {a!.requirements.length} · 위험 {a!.hazards.length}</> : "아직 분석 전" }}
-      items={secs.map((x) => ({ id: x.id, label: x.label, n: x.show ? x.n : undefined, href: `#${x.id}`, on: x.show && active === x.id, off: !x.show }))}
+      target={{ k: "1단계 · 시스템 설명", name: done ? a!.name : "새 시스템", meta: done ? <>구성 블록 {a!.blocks.length} · 요구사항 {a!.requirements.length} · 위험 {a!.hazards.length}</> : "아직 분석 전" }}
+      items={secs.map((x, i) => ({ id: x.id, label: x.label, sub: x.sub, icon: x.icon, done: x.show && i < curIdx, on: x.id === curId, off: !x.show, onClick: () => go(x.id) }))}
       links={done ? [{ label: "다음: 내 시험 계획 →", href: "/plan" }] : undefined}
-      crumb={[done ? a!.name : "새 시스템", "1단계", "시스템 입력"]}
-      title="시스템 입력"
-      desc="시험할 시스템을 설명하면 AI가 구성 블록, 요구사항, 위험(HARA)을 정리합니다. 시험 조건을 정하는 데 빠진 정보가 있으면 질문으로 알려줍니다."
+      crumb={[done ? a!.name : "새 시스템", "1단계 시스템 설명", secs[Math.max(0, curIdx)]?.label ?? ""]}
+      title=""
     >
-      <section className="section" id="sec-input">
+      <section className="section wz-panel" id="sec-input" hidden={curId !== "sec-input"}>
+        <PanelHead icon={ICON.doc} title="시스템 설명">시험할 시스템을 설명하면 AI가 구성 블록, 요구사항, 위험을 정리합니다. 시험 조건을 정하는 데 빠진 정보가 있으면 질문으로 알려줍니다.</PanelHead>
         <div className="presets">
           <span className="small muted">예시 불러오기</span>
           {DEMO_CASES.map((c) => (
@@ -137,14 +146,14 @@ function SystemStep() {
 
       {a && !stale && (
         <>
-          <section className="section analysis-overview" id="sec-summary">
+          <section className="section analysis-overview" id="sec-summary" hidden={curId !== "sec-blocks"}>
             <h2>{a.name}</h2>
             <p className="desc">{a.summary}</p>
           </section>
 
-          <section className="section" id="sec-blocks">
-            <h2>구성 블록 ({a.blocks.length})</h2>
-            <p className="desc">시스템이 어떤 부품으로 이뤄지고 신호가 어떻게 흐르는지(센서 → 처리 → 액추에이터) 정리했습니다. AI가 설명을 바탕으로 만든 초안이라 실제와 다를 수 있습니다. {live ? "블록 이름을 눌러 고치고, ⠿를 끌어 다른 칸으로 옮기세요. 빠진 블록은 각 칸의 “+ 추가”로 넣습니다." : ""}</p>
+          <section className="section wz-panel" id="sec-blocks" hidden={curId !== "sec-blocks"}>
+            <PanelHead icon={ICON.blocks} title={`구성 블록 (${a.blocks.length})`}>시스템이 어떤 부품으로 이뤄지고 신호가 어떻게 흐르는지(센서 → 처리 → 액추에이터) 정리했습니다. {live ? "블록 이름을 눌러 고치고, ⠿를 끌어 다른 칸으로 옮기세요. 빠진 블록은 각 칸의 “+ 추가”로 넣습니다." : ""}</PanelHead>
+            <AiNote />
             {live ? (
               <BlockDiagramEditor blocks={a.blocks} onChange={(blocks) => update({ analysis: { ...a, blocks } })} />
             ) : (
@@ -152,9 +161,9 @@ function SystemStep() {
             )}
           </section>
 
-          <section className="section" id="sec-req">
-            <h2><Term k="requirement">요구사항</Term> ({a.requirements.length})</h2>
-            <p className="desc">시스템이 제대로 동작하려면 만족해야 하는 기능·성능 조건입니다. 다음 단계에서 AI가 제안하는 시험의 근거가 됩니다. {live ? "AI가 정리한 내용이 맞는지 확인하고, 각 줄을 눌러 고치거나 추가하세요." : ""}</p>
+          <section className="section wz-panel" id="sec-req" hidden={curId !== "sec-req"}>
+            <PanelHead icon={ICON.req} title={<><Term k="requirement">요구사항</Term> ({a.requirements.length})</>}>이 시스템이 만족해야 하는 기능·성능 조건이며, 다음 단계에서 AI가 제안하는 시험의 근거가 됩니다. {live ? "각 줄을 눌러 고치거나 추가하세요." : ""}</PanelHead>
+            <AiNote />
             <div className="card">
               {a.requirements.map((r, i) => (
                 <div key={i} className="req-row">
@@ -179,11 +188,11 @@ function SystemStep() {
           </section>
 
           {(a.questions.length > 0 || (a.facts?.length ?? 0) > 0) && (
-            <section className="section" id="sec-premise">
-              <h2><Term k="premise">분석 전제 확인</Term></h2>
-              <p className="desc">
-                시스템 설명만으로는 알기 어려워 AI가 추가로 확인하고 싶은 정보입니다. 질문마다 <b>직접 답하기</b>, <b>AI 가정 사용</b>(AI가 임시로 정한 값으로 진행), <b>확인 필요</b>(팀에 물어봐야 함) 중 하나를 고르세요. 고른 상태는 이름표로 결과 화면까지 따라가서, 어떤 시험이 가정에 기대는지 알 수 있습니다.
-              </p>
+            <section className="section wz-panel" id="sec-premise" hidden={curId !== "sec-premise"}>
+              <PanelHead icon={ICON.premise} title={<Term k="premise">분석 전제</Term>}>
+                시스템 설명만으로는 알기 어려워 AI가 추가로 확인하고 싶은 정보입니다. 질문마다 <b>직접 답하기</b>, <b>AI 가정 사용</b>(AI가 임시로 정한 값으로 진행), <b>확인 필요</b>(팀에 물어봐야 함) 중 하나를 고르세요. 고른 상태는 이름표로 결과 화면까지 따라갑니다.
+              </PanelHead>
+              <AiNote />
               <div className="card">
                 {(a.facts ?? []).map((f, i) => (
                   <div key={`f${i}`} className="q">
@@ -228,22 +237,40 @@ function SystemStep() {
             </section>
           )}
 
-          <section className="section" id="sec-hazard">
-            <h2>위험 분석 (<Term k="hara">HARA</Term> 개념 적용)</h2>
-            <p className="desc">어떤 상황에서 어떤 위험이 생길 수 있고, 이를 막으려면 어떤 안전 목표가 필요한지 정리했습니다. 위험마다 심각도(S)·노출(E)·제어 가능성(C)을 매겨 <Term k="asil">ASIL</Term>을 참고값으로 붙였습니다. ISO 26262의 위험 분석 개념을 적용해 본 것이며, 규격 준수나 인증을 뜻하지 않습니다.</p>
+          <section className="section wz-panel" id="sec-hazard" hidden={curId !== "sec-hazard"}>
+            <PanelHead icon={ICON.hazard} title="위험 분석">어떤 상황에서 어떤 위험이 생길 수 있고, 이를 막으려면 어떤 안전 목표가 필요한지 정리했습니다.</PanelHead>
             <div className="card" style={{ padding: 0 }}><HazardTable a={a} /></div>
+            <div className="wz-note safety">{ICON.info}<span>안전 목표와 <Term k="asil">ASIL</Term>(참고)은 ISO 26262의 위험 분석(<Term k="hara">HARA</Term>) 개념을 자작 시스템에 적용해 본 것이며, 규격 준수나 인증을 뜻하지 않습니다.</span></div>
           </section>
 
-          <div className="actions">
-            <span className="spacer" />
-            <button className="btn primary lg" disabled={!analysisOk || a.requirements.some((r) => !r.text.trim()) || a.blocks.some((b) => !b.label.trim())} onClick={() => router.push("/plan")}>
-              다음: 내 시험 계획 →
-            </button>
+          <div className="wz-nav">
+            {prev ? <button className="btn lg" onClick={() => go(prev.id)}>← 이전</button> : <span />}
+            {next ? (
+              <button className="btn primary lg" disabled={curId !== "sec-input" && !canLeave} onClick={() => go(next.id)}>다음: {next.label} →</button>
+            ) : (
+              <button className="btn primary lg" disabled={!analysisOk || !canLeave} onClick={() => router.push("/plan")}>다음: 시험 계획 →</button>
+            )}
           </div>
         </>
       )}
     </AppFrame>
   );
+}
+
+function PanelHead({ icon, title, children }: { icon: React.ReactNode; title: React.ReactNode; children?: React.ReactNode }) {
+  return (
+    <div className="wz-head">
+      <span className="wz-ic" aria-hidden>{icon}</span>
+      <div>
+        <h2>{title}</h2>
+        {children && <p className="desc">{children}</p>}
+      </div>
+    </div>
+  );
+}
+
+function AiNote() {
+  return <div className="wz-note">{ICON.info}<span>AI가 만든 초안이라 틀릴 수 있어요. 실제와 다른 부분은 직접 고칠 수 있어요.</span></div>;
 }
 
 const EDIT_STAGES: { id: Stage; label: string }[] = [

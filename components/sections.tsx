@@ -485,18 +485,18 @@ export function TraceTable({ data, s }: { data: CaseData; s: S }) {
 export function HazardTable({ a }: { a: Pick<CaseData, "hazards" | "safetyGoals"> }) {
   return (
     <div className="tbl-wrap">
-      <table className="tbl">
-        <thead><tr><th scope="col">위험</th><th scope="col">상황</th><th scope="col">S·E·C</th><th scope="col">ASIL (참고)</th><th scope="col">안전 목표</th></tr></thead>
+      <table className="tbl hz-tbl">
+        <thead><tr><th scope="col">발생 상황</th><th scope="col">발생할 수 있는 위험</th><th scope="col">안전 목표</th><th scope="col">안전 중요도</th></tr></thead>
         <tbody>
           {a.hazards.map((h) => {
             const sg = a.safetyGoals.find((g) => g.id === h.sg);
+            const tags = h.situation.split(/\s*[,，]\s*/).map((x) => x.trim()).filter(Boolean);
             return (
               <tr key={h.id}>
+                <td><div className="hz-tags">{tags.map((t, i) => <span key={i} className="hz-tag">{t}</span>)}</div></td>
                 <td><span className="mono muted">{h.id}</span> {h.text}</td>
-                <td>{h.situation}</td>
-                <td className="mono">S{h.S} E{h.E} C{h.C}</td>
-                <td><Asil a={hazardAsil(h)} /></td>
                 <td><span className="mono muted">{sg?.id}</span> {sg?.text}<div className="small muted">안전 상태: {sg?.safeState}</div></td>
+                <td><Asil a={hazardAsil(h)} /><div className="small muted mono" title="심각도(S) · 노출(E) · 제어 가능성(C)">S{h.S} E{h.E} C{h.C}</div></td>
               </tr>
             );
           })}
