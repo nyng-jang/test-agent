@@ -25,9 +25,9 @@ export default function Shell({ step, wide, children }: { step: 1 | 2 | 3; wide?
   if (!ready || !mode) return <div className="wrap" style={{ padding: 40 }}><span className="muted">불러오는 중…</span></div>;
 
   const steps = [
-    { n: 1, label: "시스템 입력", href: "/system", on: true },
-    { n: 2, label: "시험 계획", href: "/plan", on: analysisOk },
-    { n: 3, label: "분석 결과", href: "/result", on: gapOk },
+    { n: 1, label: "시스템 설명", href: "/system", on: true, done: analysisOk },
+    { n: 2, label: "시험 계획", href: "/plan", on: analysisOk, done: gapOk },
+    { n: 3, label: "결과 확인", href: "/result", on: gapOk, done: false },
   ];
 
   return (
@@ -35,17 +35,22 @@ export default function Shell({ step, wide, children }: { step: 1 | 2 | 3; wide?
       <a href="#main" className="skip">본문으로 건너뛰기</a>
       <header className="topbar">
         <div className={`${wide ? "wrap-wide" : "wrap"} topbar-in`}>
-          <Link href="/" className="brand"><img src="/logo.png" alt="" className="brand-logo" width={30} height={30} /><span className="brand-text"><b>TEST AGENT</b><small>Test Plan Analyzer</small></span></Link>
+          <Link href="/" className="brand"><img src="/logo.png" alt="" className="brand-logo" width={30} height={30} /><span className="brand-text"><b>Test Agent</b></span></Link>
           <nav className="steps" aria-label="단계">
-            {steps.map((s) =>
-              s.on ? (
-                <Link key={s.n} href={s.href} className={`step ${step === s.n ? "cur" : ""}`} aria-current={step === s.n ? "step" : undefined}>
-                  <span className="num">{s.n}</span><span className="lbl">{s.label}</span>
-                </Link>
-              ) : (
-                <span key={s.n} className="step off" aria-disabled="true" title="이전 단계를 먼저 마쳐 주세요"><span className="num">{s.n}</span><span className="lbl">{s.label}</span></span>
-              ),
-            )}
+            {steps.map((s, i) => {
+              const cls = `step ${step === s.n ? "cur" : ""} ${s.done && step !== s.n ? "done" : ""}`;
+              const inner = <><span className="num">{s.done && step !== s.n ? "✓" : s.n}</span><span className="lbl">{s.label}</span></>;
+              return (
+                <span key={s.n} className="step-wrap">
+                  {i > 0 && <span className={`step-line ${s.on ? "on" : ""}`} aria-hidden />}
+                  {s.on ? (
+                    <Link href={s.href} className={cls} aria-current={step === s.n ? "step" : undefined}>{inner}</Link>
+                  ) : (
+                    <span className={`${cls} off`} aria-disabled="true" title="이전 단계를 먼저 마쳐 주세요">{inner}</span>
+                  )}
+                </span>
+              );
+            })}
           </nav>
           <div className="who">
             {mode === "live" && llm ? (
@@ -53,7 +58,8 @@ export default function Shell({ step, wide, children }: { step: 1 | 2 | 3; wide?
             ) : (
               <span className="pill none">키 없이 체험</span>
             )}
-            <button className="btn" onClick={() => { logout(); router.replace("/"); }}>
+            <Link href="/" className="btn">처음으로</Link>
+            <button className="btn quiet" onClick={() => { logout(); router.replace("/"); }}>
               {mode === "live" ? "키 지우고 나가기" : "나가기"}
             </button>
           </div>

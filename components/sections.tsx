@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { Asil as AsilT, CaseData, Category, Premise, TestItem } from "@/lib/types";
 import { CATEGORIES, PREMISE_LABEL, STAGES } from "@/lib/types";
+import { Term } from "@/components/Term";
 import {
   asilRank, hazardAsil, matrix, PRIORITY_LABEL, summary, testAsil, traceCsv,
   type CellStatus, type Priority, type TestStatus,
@@ -484,18 +485,18 @@ export function TraceTable({ data, s }: { data: CaseData; s: S }) {
 export function HazardTable({ a }: { a: Pick<CaseData, "hazards" | "safetyGoals"> }) {
   return (
     <div className="tbl-wrap">
-      <table className="tbl">
-        <thead><tr><th scope="col">위험</th><th scope="col">상황</th><th scope="col">S·E·C</th><th scope="col">ASIL (참고)</th><th scope="col">안전 목표</th></tr></thead>
+      <table className="tbl hz-tbl">
+        <thead><tr><th scope="col">발생 상황</th><th scope="col">발생할 수 있는 위험</th><th scope="col">안전 목표</th><th scope="col">안전 중요도</th></tr></thead>
         <tbody>
           {a.hazards.map((h) => {
             const sg = a.safetyGoals.find((g) => g.id === h.sg);
+            const tags = h.situation.split(/\s*[,，]\s*/).map((x) => x.trim()).filter(Boolean);
             return (
               <tr key={h.id}>
+                <td><div className="hz-tags">{tags.map((t, i) => <span key={i} className="hz-tag">{t}</span>)}</div></td>
                 <td><span className="mono muted">{h.id}</span> {h.text}</td>
-                <td>{h.situation}</td>
-                <td className="mono">S{h.S} E{h.E} C{h.C}</td>
-                <td><Asil a={hazardAsil(h)} /></td>
                 <td><span className="mono muted">{sg?.id}</span> {sg?.text}<div className="small muted">안전 상태: {sg?.safeState}</div></td>
+                <td><Asil a={hazardAsil(h)} /><div className="small muted mono" title="심각도(S) · 노출(E) · 제어 가능성(C)">S{h.S} E{h.E} C{h.C}</div></td>
               </tr>
             );
           })}
@@ -553,6 +554,13 @@ export function DetailPanel({ data, s, id, onClose }: { data: CaseData; s: S; id
   );
 }
 
+/** 상세 맨 위 한 줄: 계획 상태로 만든 문장 (AI가 준 누락 이유가 생기면 그걸 우선) */
+function gapLead(st: TestStatus, nPlans: number) {
+  if (st === "missing") return "내 시험 계획에 이 시험에 대응하는 항목이 없습니다.";
+  if (st === "partial") return `내 계획 ${nPlans}개 항목이 관련은 있지만, 아래 시험 조건이나 판정 기준 일부가 빠져 있습니다.`;
+  return "내 시험 계획으로 확인되는 시험입니다.";
+}
+
 /** 시험 상세 내용 (드로어와 결과 화면의 오른쪽 상세 패널이 함께 씀) */
 export function TestDetailBody({ data, s, t }: { data: CaseData; s: S; t: TestItem }) {
   const st = s.status[t.id];
@@ -570,21 +578,22 @@ export function TestDetailBody({ data, s, t }: { data: CaseData; s: S; t: TestIt
           <Importance a={testAsil(t, s.sgA)} />
         </div>
 
+        <div className={`drawer-sec gap-why gap-why-${st}`}>
+          <h3>{st === "missing" ? "왜 빠졌나" : st === "partial" ? "무엇이 부족한가" : "내 계획과의 연결"}</h3>
+          <p className="gap-why-lead">{gapLead(st, plans.length)}</p>
+          {plans.length > 0 && (
+            <ul className="plain">{plans.map((p) => <li key={p.id}><StatusPill st={p.covers[t.id]} /> {p.text}</li>)}</ul>
+          )}
+          {t.why && <p><span className="muted">이 시험이 필요한 이유: </span>{t.why}</p>}
+        </div>
+
         <div className="drawer-sec">
           <h3>시험 조건</h3><p>{t.condition}</p>
-          <h3>판정 기준</h3><p>{t.criteria}</p>
-          {t.why && <><h3>왜 필요한가</h3><p>{t.why}</p></>}
+          <h3><Term k="criteria" /></h3><p>{t.criteria}</p>
         </div>
 
         <div className="drawer-sec">
-          <h3>내 계획과의 연결</h3>
-          {plans.length ? (
-            <ul className="plain">{plans.map((p) => <li key={p.id}><StatusPill st={p.covers[t.id]} /> {p.text}</li>)}</ul>
-          ) : <p className="muted">내 계획에 대응하는 항목이 없습니다.</p>}
-        </div>
-
-        <div className="drawer-sec">
-          <h3>근거 요구사항</h3>
+          <h3>관련 요구사항</h3>
           {reqs.length ? <ul className="plain">{reqs.map((r) => <li key={r.id}><span className="mono muted">{r.id}</span> {r.text}</li>)}</ul> : <p className="muted">연결된 요구사항 없음</p>}
         </div>
 
@@ -613,7 +622,7 @@ export function TestDetailBody({ data, s, t }: { data: CaseData; s: S; t: TestIt
         )}
 
         <div className="drawer-sec">
-          <h3>분석 전제</h3>
+          <h3><Term k="premise" /></h3>
           {prem.length ? (
             <ul className="plain">
               {prem.map((p) => (

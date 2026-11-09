@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Shell, { useStepState } from "@/components/Shell";
 import { AppFrame } from "@/components/AppFrame";
+import { Term } from "@/components/Term";
+import { ICON } from "@/lib/icons";
 import {
   BlockDiagram, CoverageMatrix, DetailPanel, DetailProvider, GapCompare,
   SafetyTrace, StatusPill, TestDetailBody, TraceTable,
@@ -70,11 +72,11 @@ function ResultStep() {
   const nav: { id: ViewId; label: string; n?: number }[] = [
     { id: "gaps", label: "보완 항목", n: s.missing.length },
     { id: "tests", label: "전체 시험", n: s.total },
-    { id: "compare", label: "계획 비교", n: data.plan.length },
-    { id: "trace", label: "요구사항 추적", n: data.requirements.length },
-    { id: "blocks", label: "시스템 블록도", n: data.blocks.length },
+    { id: "compare", label: "내 계획과 비교", n: data.plan.length },
+    { id: "trace", label: "요구사항별 시험 확인", n: data.requirements.length },
+    { id: "blocks", label: "시스템 구성과 시험", n: data.blocks.length },
   ];
-  const title: Record<ViewId, string> = { gaps: "보완 항목", tests: "전체 시험", compare: "계획 비교", trace: "요구사항 추적", blocks: "시스템 블록도" };
+  const title: Record<ViewId, string> = { gaps: "보완 항목", tests: "전체 시험", compare: "내 계획과 비교", trace: "요구사항별 시험 확인", blocks: "시스템 구성과 시험 연결" };
 
   return (
     <DetailProvider value={setDetail}>
@@ -83,10 +85,11 @@ function ResultStep() {
         items={nav.map((n) => ({ ...n, on: view === n.id, onClick: () => go(n.id) }))}
         links={[{ label: "분석 전제 고치기", href: "/system" }, { label: "시험 계획 고치기", href: "/plan" }, { label: "결과 JSON 내려받기", onClick: downloadJson }]}
         crumb={[data.name, "분석 결과", title[view]]}
-        title={title[view]}
+        title={view === "gaps" ? "" : title[view]}
       >
           {view === "gaps" && (
             <>
+              <ResultHero data={data} s={s} onOpen={setDetail} />
               <Dashboard data={data} s={s} />
               <TestWorkspace data={data} s={s} list={s.missing} onNarrowOpen={setDetail} heading="우선 확인할 항목" note="누락되었거나 일부만 반영된 시험입니다. 우선순위 순으로 정렬했습니다." />
               {checks.length > 0 && (
@@ -117,6 +120,50 @@ function ResultStep() {
   );
 }
 
+/* ---------- 결과 첫 줄: 결론 문장 + 주요 발견 사항 ---------- */
+function ResultHero({ data, s, onOpen }: { data: CaseData; s: S; onOpen: (id: string) => void }) {
+  const top = s.missing.slice(0, 3);
+  const n = s.missing.length;
+  return (
+    <section className="rh" aria-labelledby="rh-title">
+      <div className="rh-head">
+        <span className="rh-check" aria-hidden>{ICON.check}</span>
+        <div>
+          <h2 id="rh-title">{n > 0 ? <>시험 계획에서 보완할 조건을<br />총 <em>{n}개</em> 발견했어요</> : <>제안한 시험이 모두<br />계획에 들어 있어요</>}</h2>
+          <p>{data.name} · 내 계획 {data.plan.length}개를 제안 시험 {s.total}개와 대조했어요. 빠진 시험 {s.missingCount}개, 일부만 반영된 시험 {s.partial}개입니다.</p>
+        </div>
+      </div>
+      {n > 0 && (
+        <div className="rh-grid">
+          <div className="rh-card">
+            <h3><span className="rh-warn" aria-hidden>{ICON.hazard}</span>먼저 확인할 시험</h3>
+            <ul>
+              {top.map((t) => (
+                <li key={t.id}>
+                  <button type="button" onClick={() => onOpen(t.id)}>
+                    <span className="rh-t">{t.title}</span>
+                    <span className="rh-sub">{s.status[t.id] === "missing" ? "계획에 없음" : "일부만 반영"} · {CATEGORIES.find((c) => c.id === t.cat)?.label}</span>
+                    {s.prio[t.id] && <span className={`rh-prio p-${s.prio[t.id]}`}>{PRIORITY_LABEL[s.prio[t.id]!]}</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <a className="rh-more" href="#rs-list" onClick={(e) => { e.preventDefault(); document.getElementById("rs-list")?.scrollIntoView({ behavior: "smooth" }); }}>전체 {n}개 자세히 보기 <span aria-hidden>→</span></a>
+          </div>
+          <div className="rh-side">
+            <h3>이렇게 활용하세요</h3>
+            <ol>
+              <li>위 시험을 눌러 <b>왜 빠졌는지</b>와 조건·판정 기준을 확인해요.</li>
+              <li>필요한 시험을 내 계획에 넣고 <Link href="/plan">다시 대조</Link>해요.</li>
+              <li>AI 가정에 기대는 시험은 <Link href="/system">분석 전제</Link>를 확인해요.</li>
+            </ol>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 /* ---------- 대시보드 (TestRail식 요약) ---------- */
 function Dashboard({ data, s }: { data: CaseData; s: S }) {
   const pct = Math.round(((s.full + s.partial * 0.5) / Math.max(1, s.total)) * 100);
@@ -142,7 +189,7 @@ function Dashboard({ data, s }: { data: CaseData; s: S }) {
           <div><span>누락</span><b className="c-gap">{s.missingCount}</b></div>
         </div>
         <div className="rs-cov">
-          <div className="rs-cov-top"><span>시험 계획 커버리지</span><b>{pct}%</b></div>
+          <div className="rs-cov-top"><span><Term k="coverage">시험 계획 커버리지</Term></span><b>{pct}%</b></div>
           <div className="rs-bar lg" aria-hidden>
             <i className="f" style={{ flex: s.full }} /><i className="p" style={{ flex: s.partial }} /><i className="m" style={{ flex: s.missingCount }} />
           </div>
@@ -164,7 +211,7 @@ function Dashboard({ data, s }: { data: CaseData; s: S }) {
           </ul>
         </section>
         <section className="rs-card">
-          <h2>보완 우선순위</h2>
+          <h2><Term k="priority" /></h2>
           <ul className="rs-prio">
             {(["high", "mid", "low"] as Priority[]).map((p) => (
               <li key={p}>
@@ -174,14 +221,14 @@ function Dashboard({ data, s }: { data: CaseData; s: S }) {
               </li>
             ))}
           </ul>
-          <p className="rs-fine">계획 상태와 안전 중요도(ASIL, 참고)를 함께 보고 정했습니다.</p>
+          <p className="rs-fine">계획 상태와 <Term k="importance" />(ASIL, 참고)를 함께 보고 정했습니다.</p>
         </section>
         <section className="rs-card">
-          <h2>분석 전제</h2>
+          <h2><Term k="premise" /></h2>
           <ul className="rs-prem">
-            <li><span className="ptag fact">사용자 확인</span><b>{nFact}</b></li>
-            <li><span className="ptag assume">AI 가정</span><b>{nAssume}</b></li>
-            <li><span className="ptag unknown">확인 필요</span><b>{nUnknown}</b></li>
+            <li><Term k="fact"><span className="ptag fact">사용자 확인</span></Term><b>{nFact}</b></li>
+            <li><Term k="assume"><span className="ptag assume">AI 가정</span></Term><b>{nAssume}</b></li>
+            <li><Term k="unknown"><span className="ptag unknown">확인 필요</span></Term><b>{nUnknown}</b></li>
           </ul>
           <p className="rs-fine">
             {dependent > 0 ? <>AI 가정이나 확인 필요 전제에 기대는 시험이 <b>{dependent}개</b> 있습니다. 목록에서 표시를 확인하세요.</> : "모든 시험이 확인된 정보에만 기대고 있습니다."}
@@ -221,7 +268,7 @@ function TestWorkspace({ data, s, list, onNarrowOpen, heading, note, showStatusF
   };
 
   return (
-    <section className="rs-work">
+    <section className="rs-work" id="rs-list">
       <div className="rs-card rs-listcard">
         <div className="rs-list-head">
           <div>
