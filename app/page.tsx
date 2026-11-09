@@ -20,6 +20,7 @@ export default function StartPage() {
   const [model, setModel] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [keyOpen, setKeyOpen] = useState(false);
 
   const changeProvider = (p: Provider) => { setProvider(p); setModels([]); setModel(""); setErr(""); };
 
@@ -60,10 +61,8 @@ export default function StartPage() {
 
       <main className="auth-grid">
         <section className="auth-panel" aria-labelledby="login-title">
-          <h1 id="login-title">로그인</h1>
-          <p className="auth-sub">
-            API 키가 없나요? <a href={KEY_HELP[provider].url} target="_blank" rel="noreferrer">{KEY_HELP[provider].label}에서 발급</a>
-          </p>
+          <h1 id="login-title">시작하기</h1>
+          <p className="auth-sub">엔지니어가 짠 시험 계획에서 빠진 시험 조건을 찾아주는 도구입니다.</p>
 
           {ready && mode && (
             <div className="notice auth-resume">
@@ -72,40 +71,48 @@ export default function StartPage() {
             </div>
           )}
 
-          <div className="auth-seg" role="radiogroup" aria-label="AI 제공사">
-            {(["gemini", "claude"] as Provider[]).map((p) => (
-              <button key={p} type="button" role="radio" aria-checked={provider === p} className={provider === p ? "on" : ""} onClick={() => { changeProvider(p); document.getElementById("key")?.focus(); }}>
-                {PROVIDER_LABEL[p]}로 로그인
-              </button>
-            ))}
-          </div>
+          <button type="button" className="auth-submit auth-main" onClick={showcase}>키 없이 체험하기</button>
+          <p className="auth-hint">예시 사례 3개(자율주행 대회 차량, 무선 E-stop, 디지털 사이드미러)로 시스템 입력부터 결과까지 따라갑니다. API 키가 필요 없습니다.</p>
 
+          <div className="auth-or"><span>또는, 내 시스템을 직접 분석</span></div>
+          {!keyOpen ? (
+            <button type="button" className="auth-alt" aria-expanded={false} onClick={() => setKeyOpen(true)}>내 API 키로 분석 시작</button>
+          ) : (
+            <div className="auth-key">
+              <p className="auth-hint" style={{ marginTop: 0 }}>
+                본인 AI API 키로 직접 분석합니다. 키가 없나요? <a href={KEY_HELP[provider].url} target="_blank" rel="noreferrer">{KEY_HELP[provider].label}에서 발급</a>
+              </p>
+              <div className="auth-seg" role="radiogroup" aria-label="AI 제공사">
+                {(["gemini", "claude"] as Provider[]).map((p) => (
+                  <button key={p} type="button" role="radio" aria-checked={provider === p} className={provider === p ? "on" : ""} onClick={() => { changeProvider(p); document.getElementById("key")?.focus(); }}>
+                    {PROVIDER_LABEL[p]} 키 사용
+                  </button>
+                ))}
+              </div>
 
-          <form onSubmit={check} className="auth-form">
-            <label className="f" htmlFor="key">{PROVIDER_LABEL[provider]} API 키</label>
-            <input id="key" type="password" value={key} placeholder={KEY_HELP[provider].ph} autoComplete="off" spellCheck={false}
-              onChange={(e) => { setKey(e.target.value); setModels([]); setModel(""); }} />
-            {models.length > 0 && (
-              <>
-                <label className="f" htmlFor="model">모델</label>
-                <select id="model" value={model} onChange={(e) => setModel(e.target.value)}>
-                  {models.map((m) => <option key={m} value={m}>{m}</option>)}
-                </select>
-                <div className="auth-ok">키를 확인했습니다. 쓸 수 있는 모델 {models.length}개</div>
-              </>
-            )}
-            <p className="auth-hint">키는 이 탭에만 저장되고 서버로 보내지 않습니다. 분석 한 번에 AI를 2번 호출하며 비용은 키 주인에게 청구됩니다.</p>
-            {err && <div className="notice err" style={{ marginTop: 12 }}>{err}</div>}
-            {models.length === 0 ? (
-              <button className="auth-submit" disabled={busy || key.trim().length < 10}>{busy ? "키 확인 중…" : "키 확인"}</button>
-            ) : (
-              <button type="button" className="auth-submit" disabled={!model} onClick={start}>로그인</button>
-            )}
-          </form>
-
-          <div className="auth-or"><span>또는, 키 없이 둘러보기</span></div>
-          <button type="button" className="auth-alt" onClick={showcase}>키 없이 체험하기</button>
-          <p className="auth-hint">예시 사례 3개(자율주행 대회 차량, 무선 E-stop, 디지털 사이드미러)로 전체 과정을 따라갑니다.</p>
+              <form onSubmit={check} className="auth-form">
+                <label className="f" htmlFor="key">{PROVIDER_LABEL[provider]} API 키</label>
+                <input id="key" type="password" value={key} placeholder={KEY_HELP[provider].ph} autoComplete="off" spellCheck={false} autoFocus
+                  onChange={(e) => { setKey(e.target.value); setModels([]); setModel(""); }} />
+                {models.length > 0 && (
+                  <>
+                    <label className="f" htmlFor="model">모델</label>
+                    <select id="model" value={model} onChange={(e) => setModel(e.target.value)}>
+                      {models.map((m) => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                    <div className="auth-ok">키를 확인했습니다. 쓸 수 있는 모델 {models.length}개</div>
+                  </>
+                )}
+                <p className="auth-hint">키는 이 탭에만 저장되고 서버로 보내지 않습니다. 분석 한 번에 AI를 2번 호출하며 비용은 키 주인에게 청구됩니다.</p>
+                {err && <div className="notice err" style={{ marginTop: 12 }}>{err}</div>}
+                {models.length === 0 ? (
+                  <button className="auth-submit" disabled={busy || key.trim().length < 10}>{busy ? "키 확인 중…" : "키 확인"}</button>
+                ) : (
+                  <button type="button" className="auth-submit" disabled={!model} onClick={start}>분석 시작</button>
+                )}
+              </form>
+            </div>
+          )}
         </section>
 
         <section className="auth-showcase" aria-labelledby="showcase-title">

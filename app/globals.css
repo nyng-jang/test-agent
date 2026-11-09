@@ -894,3 +894,26 @@ footer { max-width: 1120px; line-height: 1.7; }
   .rs-table td:nth-child(2), .rs-table th:nth-child(2) { padding-left: 16px; }
   .rs-table td { padding: 10px 8px; }
 }
+
+/* 첫 화면: 키 없이 체험이 메인, 키 입력은 펼침 */
+.auth-main { margin-top: 18px; }
+.auth-key { border-top: 0; }
+.auth-alt { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+.auth-alt:hover { background: #f3f6fb; border-color: #8b98ad; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .auth-alt:hover { background: #1c2a45; } }
+
+/* 용어 도움말 (components/Term.tsx) */
+.term { position: relative; display: inline-flex; align-items: center; gap: 4px; }
+.term-i {
+  display: inline-grid; place-items: center; width: 16px; height: 16px; padding: 0; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+  font: italic 600 10.5px/1 Georgia, serif; cursor: help; flex: none; vertical-align: middle;
+}
+.term-i:hover, .term-i[aria-expanded="true"] { border-color: var(--accent, #2563eb); color: var(--accent, #2563eb); }
+.term-pop {
+  position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; width: max-content; max-width: min(300px, 80vw);
+  display: grid; gap: 3px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); box-shadow: 0 8px 24px rgba(15, 23, 42, .14);
+  font-size: 13px; font-weight: 400; line-height: 1.5; letter-spacing: 0; text-align: left; white-space: normal;
+}
+.term-pop b { font-size: 13px; font-weight: 700; }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Shell, { useStepState } from "@/components/Shell";
 import { AppFrame } from "@/components/AppFrame";
+import { Term } from "@/components/Term";
 import {
   BlockDiagram, CoverageMatrix, DetailPanel, DetailProvider, GapCompare,
   SafetyTrace, StatusPill, TestDetailBody, TraceTable,
@@ -142,7 +143,7 @@ function Dashboard({ data, s }: { data: CaseData; s: S }) {
           <div><span>누락</span><b className="c-gap">{s.missingCount}</b></div>
         </div>
         <div className="rs-cov">
-          <div className="rs-cov-top"><span>시험 계획 커버리지</span><b>{pct}%</b></div>
+          <div className="rs-cov-top"><span><Term k="coverage">시험 계획 커버리지</Term></span><b>{pct}%</b></div>
           <div className="rs-bar lg" aria-hidden>
             <i className="f" style={{ flex: s.full }} /><i className="p" style={{ flex: s.partial }} /><i className="m" style={{ flex: s.missingCount }} />
           </div>
@@ -164,7 +165,7 @@ function Dashboard({ data, s }: { data: CaseData; s: S }) {
           </ul>
         </section>
         <section className="rs-card">
-          <h2>보완 우선순위</h2>
+          <h2><Term k="priority" /></h2>
           <ul className="rs-prio">
             {(["high", "mid", "low"] as Priority[]).map((p) => (
               <li key={p}>
@@ -174,14 +175,14 @@ function Dashboard({ data, s }: { data: CaseData; s: S }) {
               </li>
             ))}
           </ul>
-          <p className="rs-fine">계획 상태와 안전 중요도(ASIL, 참고)를 함께 보고 정했습니다.</p>
+          <p className="rs-fine">계획 상태와 <Term k="importance" />(ASIL, 참고)를 함께 보고 정했습니다.</p>
         </section>
         <section className="rs-card">
-          <h2>분석 전제</h2>
+          <h2><Term k="premise" /></h2>
           <ul className="rs-prem">
-            <li><span className="ptag fact">사용자 확인</span><b>{nFact}</b></li>
-            <li><span className="ptag assume">AI 가정</span><b>{nAssume}</b></li>
-            <li><span className="ptag unknown">확인 필요</span><b>{nUnknown}</b></li>
+            <li><Term k="fact"><span className="ptag fact">사용자 확인</span></Term><b>{nFact}</b></li>
+            <li><Term k="assume"><span className="ptag assume">AI 가정</span></Term><b>{nAssume}</b></li>
+            <li><Term k="unknown"><span className="ptag unknown">확인 필요</span></Term><b>{nUnknown}</b></li>
           </ul>
           <p className="rs-fine">
             {dependent > 0 ? <>AI 가정이나 확인 필요 전제에 기대는 시험이 <b>{dependent}개</b> 있습니다. 목록에서 표시를 확인하세요.</> : "모든 시험이 확인된 정보에만 기대고 있습니다."}

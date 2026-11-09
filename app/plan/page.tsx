@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Shell, { useStepState } from "@/components/Shell";
+import { Term } from "@/components/Term";
 import { AppFrame, useScrollSpy } from "@/components/AppFrame";
 import { flowPremises, gapKeyOf, useFlow } from "@/lib/flow";
 import { guessColumns, normalizePlanLine, readPlanFile, toLines, type Table } from "@/lib/planImport";
@@ -144,12 +145,12 @@ function PlanStep() {
             <div className="card">
               <label className="f" htmlFor="field-title">시험 항목</label><input id="field-title" value={fieldTitle} onChange={e => setFieldTitle(e.target.value)} placeholder="예: 통신 단절 시 모터 정지" />
               <label className="f" htmlFor="field-condition">시험 조건</label><input id="field-condition" value={fieldCondition} onChange={e => setFieldCondition(e.target.value)} placeholder="예: 정지 명령 전송 후" />
-              <label className="f" htmlFor="field-criteria">판정 기준</label><input id="field-criteria" value={fieldCriteria} onChange={e => setFieldCriteria(e.target.value)} placeholder="예: 1초 이내 모터 전원 차단" />
+              <label className="f" htmlFor="field-criteria"><Term k="criteria" /></label><input id="field-criteria" value={fieldCriteria} onChange={e => setFieldCriteria(e.target.value)} placeholder="예: 1초 이내 모터 전원 차단" />
               <button className="btn" disabled={!live || !fieldTitle.trim()} onClick={() => { const line = `${fieldTitle.trim()}${fieldCondition.trim() ? ` (${fieldCondition.trim()})` : ""}${fieldCriteria.trim() ? ` → ${fieldCriteria.trim()}` : ""}`; setLines([...lines, line]); setFieldTitle(""); setFieldCondition(""); setFieldCriteria(""); }}>계획에 항목 추가</button>
               <p className="small muted">ID 입력은 선택 사항이며 필요하지 않습니다. 조건이나 판정 기준이 비어 있으면 확인 필요로 표시합니다.</p>
             </div>
           )}
-          {!live && <div className="notice" style={{ marginTop: 10 }}>데모에서는 예시 계획으로 진행합니다. 내 계획을 넣으려면 로그인하세요.</div>}
+          {!live && <div className="notice" style={{ marginTop: 10 }}>데모에서는 예시 계획으로 진행합니다. 내 계획을 넣으려면 첫 화면에서 내 API 키를 넣어 주세요.</div>}
         </section>
       </TabPanel>
 
